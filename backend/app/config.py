@@ -49,10 +49,11 @@ class AppConfig(BaseSettings):
     smtp_from: str = ""
     smtp_use_tls: bool = True
 
-    # 短信（预留接口，可在 settings 中配置第三方短信 API）
-    sms_api_url: str = ""
-    sms_api_key: str = ""
-    sms_sign_name: str = "铺货通"
+    # 阿里云短信
+    aliyun_access_key_id: str = ""
+    aliyun_access_key_secret: str = ""
+    aliyun_sms_sign_name: str = "铺货通"
+    aliyun_sms_template_code: str = ""
 
     # 验证码有效期（分钟）
     verify_code_expire_minutes: int = 5

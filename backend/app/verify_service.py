@@ -1,4 +1,4 @@
-"""验证码发送服务：邮件(SMTP) + 短信。"""
+"""验证码发送服务：邮件(SMTP) + 阿里云短信。"""
 from __future__ import annotations
 
 import logging
@@ -25,7 +25,6 @@ def _generate_code() -> str:
 async def _save_code(target: str, code: str, code_type: str) -> None:
     """保存验证码到数据库，同时清理目标旧码。"""
     async with AsyncSessionLocal() as db:
-        # 清理旧码
         await db.execute(
             delete(VerificationCode).where(
                 VerificationCode.target == target,
@@ -101,7 +100,6 @@ async def send_email_code(email: str) -> str:
             logger.info(f"验证码已发送至 {email}")
         except Exception as e:
             logger.error(f"邮件发送失败: {e}")
-            # 不抛异常，验证码已存入数据库，可用调试接口获取
     else:
         logger.info(f"[邮箱验证码] {email} -> {code} (SMTP 未配置，仅记录)")
 
@@ -110,33 +108,41 @@ async def send_email_code(email: str) -> str:
 
 async def send_sms_code(phone: str) -> str:
     """
-    发送短信验证码。
-    返回验证码（用于测试/日志），如果配置了短信 API 则实际发送。
+    发送短信验证码（阿里云短信服务）。
+    返回验证码（用于测试/日志），实际通过阿里云 SDK 发送。
     """
     code = _generate_code()
 
     # 保存到数据库
     await _save_code(phone, code, "sms")
 
-    if settings.sms_api_url and settings.sms_api_key:
+    # 如果配置了阿里云短信，发送
+    if settings.aliyun_access_key_id and settings.aliyun_sms_template_code:
         try:
-            import httpx
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.post(
-                    settings.sms_api_url,
-                    json={
-                        "phone": phone,
-                        "code": code,
-                        "sign_name": settings.sms_sign_name,
-                    },
-                    headers={"Authorization": f"Bearer {settings.sms_api_key}"},
-                )
-                resp.raise_for_status()
+            from alibabacloud_dysmsapi20170525.client import Client as SmsClient
+            from alibabacloud_tea_openapi import models as open_api_models
+            from alibabacloud_dysmsapi20170525 import models as sms_models
+
+            config = open_api_models.Config(
+                access_key_id=settings.aliyun_access_key_id,
+                access_key_secret=settings.aliyun_access_key_secret,
+            )
+            config.endpoint = "dysmsapi.aliyuncs.com"
+            client = SmsClient(config)
+
+            req = sms_models.SendSmsRequest(
+                phone_numbers=phone,
+                sign_name=settings.aliyun_sms_sign_name,
+                template_code=settings.aliyun_sms_template_code,
+                template_param=f'{{"code":"{code}"}}',
+            )
+            await client.send_sms_with_options_async(req, None)
+
             logger.info(f"短信验证码已发送至 {phone}")
         except Exception as e:
             logger.error(f"短信发送失败: {e}")
     else:
-        logger.info(f"[短信验证码] {phone} -> {code} (短信 API 未配置，仅记录)")
+        logger.info(f"[短信验证码] {phone} -> {code} (阿里云短信未配置，仅记录)")
 
     return code
 
