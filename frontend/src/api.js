@@ -32,10 +32,25 @@ async function request(path, options = {}) {
 export const api = {
   // === 认证 ===
   setToken: (token) => { _token = token },
+  // 用户名密码
   login: (username, password) =>
     request('/auth/login', { method: 'POST', body: { username, password } }),
   register: (username, password) =>
     request('/auth/register', { method: 'POST', body: { username, password } }),
+  // 邮箱验证码
+  sendEmailCode: (email) =>
+    request('/auth/send-email-code', { method: 'POST', body: { email } }),
+  loginEmail: (email, code) =>
+    request('/auth/login-email', { method: 'POST', body: { email, code } }),
+  registerEmail: (email, code, password) =>
+    request('/auth/register-email', { method: 'POST', body: { email, code, password } }),
+  // 手机号验证码
+  sendSmsCode: (phone) =>
+    request('/auth/send-sms-code', { method: 'POST', body: { phone } }),
+  loginPhone: (phone, code) =>
+    request('/auth/login-phone', { method: 'POST', body: { phone, code } }),
+  registerPhone: (phone, code, password) =>
+    request('/auth/register-phone', { method: 'POST', body: { phone, code, password } }),
   me: () => request('/auth/me'),
   loginRecords: (page = 1, pageSize = 50) =>
     request(`/auth/login-records?page=${page}&page_size=${pageSize}`),

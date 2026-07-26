@@ -1,0 +1,149 @@
+"""验证码发送服务：邮件(SMTP) + 短信。"""
+from __future__ import annotations
+
+import logging
+import random
+import smtplib
+import string
+from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+from sqlalchemy import select, delete
+
+from .config import settings
+from .db import AsyncSessionLocal
+from .models import VerificationCode
+
+logger = logging.getLogger(__name__)
+
+
+def _generate_code() -> str:
+    return ''.join(random.choices(string.digits, k=6))
+
+
+async def _save_code(target: str, code: str, code_type: str) -> None:
+    """保存验证码到数据库，同时清理目标旧码。"""
+    async with AsyncSessionLocal() as db:
+        # 清理旧码
+        await db.execute(
+            delete(VerificationCode).where(
+                VerificationCode.target == target,
+                VerificationCode.code_type == code_type,
+            )
+        )
+        expires = datetime.now(timezone.utc) + timedelta(minutes=settings.verify_code_expire_minutes)
+        db.add(VerificationCode(
+            target=target,
+            code=code,
+            code_type=code_type,
+            expires_at=expires,
+        ))
+        await db.commit()
+
+
+async def _verify_code(target: str, code: str, code_type: str) -> bool:
+    """验证验证码是否正确且未过期。"""
+    async with AsyncSessionLocal() as db:
+        now = datetime.now(timezone.utc)
+        result = await db.execute(
+            select(VerificationCode).where(
+                VerificationCode.target == target,
+                VerificationCode.code == code,
+                VerificationCode.code_type == code_type,
+                VerificationCode.used == False,
+                VerificationCode.expires_at > now,
+            )
+        )
+        vc = result.scalar_one_or_none()
+        if vc:
+            vc.used = True
+            await db.commit()
+            return True
+        return False
+
+
+async def send_email_code(email: str) -> str:
+    """
+    发送邮箱验证码。
+    返回验证码（用于测试/日志），实际通过 SMTP 发送。
+    """
+    code = _generate_code()
+
+    # 保存到数据库
+    await _save_code(email, code, "email")
+
+    # 如果配置了 SMTP，发送邮件
+    if settings.smtp_host and settings.smtp_user:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "铺货通 - 邮箱验证码"
+            msg["From"] = settings.smtp_from or settings.smtp_user
+            msg["To"] = email
+
+            html = f"""\
+<html><body style="font-family:Arial,sans-serif;padding:20px;">
+  <h2 style="color:#3470f6;">铺货通</h2>
+  <p>您的验证码是：</p>
+  <div style="font-size:32px;font-weight:bold;color:#1F2937;letter-spacing:6px;padding:16px;background:#F3F4F6;border-radius:8px;text-align:center;margin:16px 0;">
+    {code}
+  </div>
+  <p style="color:#6B7280;font-size:13px;">验证码 {settings.verify_code_expire_minutes} 分钟内有效，请勿泄露给他人。</p>
+</body></html>"""
+            msg.attach(MIMEText(html, "html", "utf-8"))
+
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+                if settings.smtp_use_tls:
+                    server.starttls()
+                server.login(settings.smtp_user, settings.smtp_password)
+                server.sendmail(msg["From"], [email], msg.as_string())
+
+            logger.info(f"验证码已发送至 {email}")
+        except Exception as e:
+            logger.error(f"邮件发送失败: {e}")
+            # 不抛异常，验证码已存入数据库，可用调试接口获取
+    else:
+        logger.info(f"[邮箱验证码] {email} -> {code} (SMTP 未配置，仅记录)")
+
+    return code
+
+
+async def send_sms_code(phone: str) -> str:
+    """
+    发送短信验证码。
+    返回验证码（用于测试/日志），如果配置了短信 API 则实际发送。
+    """
+    code = _generate_code()
+
+    # 保存到数据库
+    await _save_code(phone, code, "sms")
+
+    if settings.sms_api_url and settings.sms_api_key:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(
+                    settings.sms_api_url,
+                    json={
+                        "phone": phone,
+                        "code": code,
+                        "sign_name": settings.sms_sign_name,
+                    },
+                    headers={"Authorization": f"Bearer {settings.sms_api_key}"},
+                )
+                resp.raise_for_status()
+            logger.info(f"短信验证码已发送至 {phone}")
+        except Exception as e:
+            logger.error(f"短信发送失败: {e}")
+    else:
+        logger.info(f"[短信验证码] {phone} -> {code} (短信 API 未配置，仅记录)")
+
+    return code
+
+
+async def verify_email_code(email: str, code: str) -> bool:
+    return await _verify_code(email, code, "email")
+
+
+async def verify_sms_code(phone: str, code: str) -> bool:
+    return await _verify_code(phone, code, "sms")

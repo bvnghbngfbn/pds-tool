@@ -1,6 +1,7 @@
-"""认证 API：登录、注册、获取当前用户、登录记录。"""
+"""认证 API：登录、注册、获取当前用户、登录记录、验证码。"""
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -16,6 +17,12 @@ from ..auth import (
 )
 from ..db import AsyncSessionLocal
 from ..models import User, LoginRecord
+from ..verify_service import (
+    send_email_code,
+    send_sms_code,
+    verify_email_code,
+    verify_sms_code,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -32,6 +39,36 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=4, max_length=128)
 
 
+class SendEmailCodeRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=128)
+
+
+class SendSmsCodeRequest(BaseModel):
+    phone: str = Field(..., min_length=11, max_length=20)
+
+
+class EmailRegisterRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=128)
+    code: str = Field(..., min_length=6, max_length=6)
+    password: str = Field(..., min_length=4, max_length=128)
+
+
+class PhoneRegisterRequest(BaseModel):
+    phone: str = Field(..., min_length=11, max_length=20)
+    code: str = Field(..., min_length=6, max_length=6)
+    password: str = Field(..., min_length=4, max_length=128)
+
+
+class EmailLoginRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=128)
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class PhoneLoginRequest(BaseModel):
+    phone: str = Field(..., min_length=11, max_length=20)
+    code: str = Field(..., min_length=6, max_length=6)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -42,6 +79,10 @@ class TokenResponse(BaseModel):
 class UserInfo(BaseModel):
     id: int
     username: str
+    email: str = ""
+    phone: str = ""
+    email_verified: bool = False
+    phone_verified: bool = False
     role: str
     is_active: bool
     created_at: str
@@ -59,6 +100,19 @@ class LoginRecordItem(BaseModel):
 
 
 # ---------- 辅助函数 ----------
+
+EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+PHONE_RE = re.compile(r"^\+?\d{7,20}$")
+
+
+def _make_token_response(user: User) -> TokenResponse:
+    token = create_access_token({"sub": user.username, "role": user.role})
+    return TokenResponse(
+        access_token=token,
+        username=user.username,
+        role=user.role,
+    )
+
 
 async def _record_login(
     user_id: int,
@@ -82,7 +136,178 @@ async def _record_login(
         await db.commit()
 
 
-# ---------- 端点 ----------
+def _record_fail(request: Request, username: str, message: str):
+    """同步记录失败登录（用于不存在的用户）"""
+    import asyncio
+    asyncio.create_task(_record_login(0, username, request, False, message))
+
+
+# ---------- 验证码端点 ----------
+
+@router.post("/send-email-code")
+async def send_email_code_endpoint(body: SendEmailCodeRequest):
+    """发送邮箱验证码。"""
+    if not EMAIL_RE.match(body.email):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式不正确")
+    await send_email_code(body.email)
+    return {"ok": True, "message": "验证码已发送"}
+
+
+@router.post("/send-sms-code")
+async def send_sms_code_endpoint(body: SendSmsCodeRequest):
+    """发送短信验证码。"""
+    if not PHONE_RE.match(body.phone):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="手机号格式不正确")
+    await send_sms_code(body.phone)
+    return {"ok": True, "message": "验证码已发送"}
+
+
+# ---------- 邮箱注册/登录 ----------
+
+@router.post("/register-email", response_model=TokenResponse)
+async def register_email(body: EmailRegisterRequest, request: Request):
+    """邮箱 + 验证码注册。"""
+    if not EMAIL_RE.match(body.email):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式不正确")
+
+    # 验证验证码
+    if not await verify_email_code(body.email, body.code):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码错误或已过期")
+
+    async with AsyncSessionLocal() as db:
+        # 检查邮箱是否已注册
+        existing = await db.execute(select(User).where(User.email == body.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该邮箱已注册")
+
+        # 用邮箱前缀生成用户名
+        username = body.email.split("@")[0]
+        base = username
+        suffix = 1
+        while True:
+            r = await db.execute(select(User).where(User.username == username))
+            if not r.scalar_one_or_none():
+                break
+            username = f"{base}{suffix}"
+            suffix += 1
+
+        user = User(
+            username=username,
+            password_hash=hash_password(body.password),
+            email=body.email,
+            email_verified=True,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+        await _record_login(user.id, user.username, request, True, "邮箱注册并登录")
+
+        return _make_token_response(user)
+
+
+@router.post("/login-email", response_model=TokenResponse)
+async def login_email(body: EmailLoginRequest, request: Request):
+    """邮箱 + 验证码登录。"""
+    if not EMAIL_RE.match(body.email):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式不正确")
+
+    # 验证验证码
+    if not await verify_email_code(body.email, body.code):
+        _record_fail(request, body.email, "邮箱验证码错误")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码错误或已过期")
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.email == body.email))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            _record_fail(request, body.email, "邮箱未注册")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="该邮箱未注册")
+
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被禁用")
+
+        user.last_login_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        await _record_login(user.id, user.username, request, True, "邮箱验证码登录")
+
+        return _make_token_response(user)
+
+
+# ---------- 手机号注册/登录 ----------
+
+@router.post("/register-phone", response_model=TokenResponse)
+async def register_phone(body: PhoneRegisterRequest, request: Request):
+    """手机号 + 验证码注册。"""
+    if not PHONE_RE.match(body.phone):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="手机号格式不正确")
+
+    if not await verify_sms_code(body.phone, body.code):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码错误或已过期")
+
+    async with AsyncSessionLocal() as db:
+        existing = await db.execute(select(User).where(User.phone == body.phone))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该手机号已注册")
+
+        # 生成用户名
+        username = f"user_{body.phone[-6:]}"
+        base = username
+        suffix = 1
+        while True:
+            r = await db.execute(select(User).where(User.username == username))
+            if not r.scalar_one_or_none():
+                break
+            username = f"{base}{suffix}"
+            suffix += 1
+
+        user = User(
+            username=username,
+            password_hash=hash_password(body.password),
+            phone=body.phone,
+            phone_verified=True,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+        await _record_login(user.id, user.username, request, True, "手机号注册并登录")
+
+        return _make_token_response(user)
+
+
+@router.post("/login-phone", response_model=TokenResponse)
+async def login_phone(body: PhoneLoginRequest, request: Request):
+    """手机号 + 验证码登录。"""
+    if not PHONE_RE.match(body.phone):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="手机号格式不正确")
+
+    if not await verify_sms_code(body.phone, body.code):
+        _record_fail(request, body.phone, "短信验证码错误")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码错误或已过期")
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.phone == body.phone))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            _record_fail(request, body.phone, "手机号未注册")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="该手机号未注册")
+
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被禁用")
+
+        user.last_login_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        await _record_login(user.id, user.username, request, True, "手机号验证码登录")
+
+        return _make_token_response(user)
+
+
+# ---------- 用户名密码注册/登录 ----------
 
 @router.post("/register", response_model=TokenResponse)
 async def register(body: RegisterRequest, request: Request):
@@ -102,12 +327,7 @@ async def register(body: RegisterRequest, request: Request):
 
         await _record_login(user.id, user.username, request, True, "注册并登录")
 
-        token = create_access_token({"sub": user.username, "role": user.role})
-        return TokenResponse(
-            access_token=token,
-            username=user.username,
-            role=user.role,
-        )
+        return _make_token_response(user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -118,39 +338,25 @@ async def login(body: LoginRequest, request: Request):
         user = result.scalar_one_or_none()
 
         if not user or not verify_password(body.password, user.password_hash):
-            # 记录失败（如果用户存在）
             if user:
                 await _record_login(user.id, body.username, request, False, "密码错误")
             else:
-                # 为不存在的用户也记录（用 user_id=0）
-                ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-                ip = ip.split(",")[0].strip()
-                ua = request.headers.get("user-agent", "")[:512]
-                async with AsyncSessionLocal() as db2:
-                    db2.add(LoginRecord(
-                        user_id=0, username=body.username, ip_address=ip,
-                        user_agent=ua, success=False, message="用户不存在",
-                    ))
-                    await db2.commit()
+                _record_fail(request, body.username, "用户不存在")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
 
         if not user.is_active:
             await _record_login(user.id, user.username, request, False, "账号已禁用")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被禁用")
 
-        # 更新最后登录时间
         user.last_login_at = datetime.now(timezone.utc)
         await db.commit()
 
         await _record_login(user.id, user.username, request, True, "登录成功")
 
-        token = create_access_token({"sub": user.username, "role": user.role})
-        return TokenResponse(
-            access_token=token,
-            username=user.username,
-            role=user.role,
-        )
+        return _make_token_response(user)
 
+
+# ---------- 用户信息 ----------
 
 @router.get("/me", response_model=UserInfo)
 async def me(current_user: User = Depends(get_current_user)):
@@ -158,12 +364,18 @@ async def me(current_user: User = Depends(get_current_user)):
     return UserInfo(
         id=current_user.id,
         username=current_user.username,
+        email=current_user.email or "",
+        phone=current_user.phone or "",
+        email_verified=current_user.email_verified,
+        phone_verified=current_user.phone_verified,
         role=current_user.role,
         is_active=current_user.is_active,
         created_at=current_user.created_at.isoformat() if current_user.created_at else "",
         last_login_at=current_user.last_login_at.isoformat() if current_user.last_login_at else None,
     )
 
+
+# ---------- 登录记录 ----------
 
 @router.get("/login-records")
 async def get_login_records(
@@ -174,7 +386,6 @@ async def get_login_records(
     """查看登录记录（仅管理员可查看全部，普通用户只看自己的）。"""
     async with AsyncSessionLocal() as db:
         if current_user.role == "admin":
-            # 管理员查看全部
             total_stmt = select(func.count(LoginRecord.id))
             total_result = await db.execute(total_stmt)
             total = total_result.scalar() or 0
@@ -186,7 +397,6 @@ async def get_login_records(
                 .limit(page_size)
             )
         else:
-            # 普通用户只看自己的
             total_stmt = select(func.count(LoginRecord.id)).where(LoginRecord.user_id == current_user.id)
             total_result = await db.execute(total_stmt)
             total = total_result.scalar() or 0
@@ -225,28 +435,23 @@ async def get_login_records(
 async def get_login_stats(current_user: User = Depends(get_current_user)):
     """登录统计概览。"""
     async with AsyncSessionLocal() as db:
-        # 总登录次数
         total_result = await db.execute(select(func.count(LoginRecord.id)))
         total = total_result.scalar() or 0
 
-        # 成功次数
         success_result = await db.execute(
             select(func.count(LoginRecord.id)).where(LoginRecord.success == True)
         )
         success = success_result.scalar() or 0
 
-        # 今日登录次数
         today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         today_result = await db.execute(
             select(func.count(LoginRecord.id)).where(LoginRecord.created_at >= today)
         )
         today_count = today_result.scalar() or 0
 
-        # 用户总数
         user_result = await db.execute(select(func.count(User.id)))
         user_count = user_result.scalar() or 0
 
-        # 最近登录记录
         recent_stmt = (
             select(LoginRecord)
             .order_by(desc(LoginRecord.created_at))

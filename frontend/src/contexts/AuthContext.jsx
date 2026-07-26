@@ -13,9 +13,7 @@ export function AuthProvider({ children }) {
     if (token) {
       api.setToken(token)
       api.me()
-        .then((u) => {
-          setUser(u)
-        })
+        .then((u) => setUser(u))
         .catch(() => {
           localStorage.removeItem('pds_token')
           api.setToken(null)
@@ -26,21 +24,21 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const login = useCallback(async (username, password) => {
-    const result = await api.login(username, password)
+  const _persist = (result) => {
     localStorage.setItem('pds_token', result.access_token)
     api.setToken(result.access_token)
     setUser({ id: 0, username: result.username, role: result.role })
     return result
-  }, [])
+  }
 
-  const register = useCallback(async (username, password) => {
-    const result = await api.register(username, password)
-    localStorage.setItem('pds_token', result.access_token)
-    api.setToken(result.access_token)
-    setUser({ id: 0, username: result.username, role: result.role })
-    return result
-  }, [])
+  const login = useCallback(async (username, password) => _persist(await api.login(username, password)), [])
+  const register = useCallback(async (username, password) => _persist(await api.register(username, password)), [])
+
+  const loginEmail = useCallback(async (email, code) => _persist(await api.loginEmail(email, code)), [])
+  const registerEmail = useCallback(async (email, code, password) => _persist(await api.registerEmail(email, code, password)), [])
+
+  const loginPhone = useCallback(async (phone, code) => _persist(await api.loginPhone(phone, code)), [])
+  const registerPhone = useCallback(async (phone, code, password) => _persist(await api.registerPhone(phone, code, password)), [])
 
   const logout = useCallback(() => {
     localStorage.removeItem('pds_token')
@@ -49,7 +47,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{
+      user, loading, login, register,
+      loginEmail, registerEmail,
+      loginPhone, registerPhone,
+      logout,
+    }}>
       {children}
     </AuthContext.Provider>
   )

@@ -41,6 +41,22 @@ class AppConfig(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 小时
 
+    # SMTP 邮件
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+
+    # 短信（预留接口，可在 settings 中配置第三方短信 API）
+    sms_api_url: str = ""
+    sms_api_key: str = ""
+    sms_sign_name: str = "铺货通"
+
+    # 验证码有效期（分钟）
+    verify_code_expire_minutes: int = 5
+
     # 服务
     host: str = "0.0.0.0"
     port: int = 8000
