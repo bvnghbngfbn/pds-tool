@@ -1,5 +1,9 @@
 // API 客户端封装
-const BASE = '/api'
+// 本地开发：自动用 /api
+// 互联网访问：自动用 Render 后端地址
+const BASE = window.location.hostname === 'localhost'
+  ? '/api'
+  : 'https://pds-tool.onrender.com/api'
 
 async function request(path, options = {}) {
   const opts = {
