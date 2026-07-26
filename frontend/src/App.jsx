@@ -21,30 +21,42 @@ const tabs = [
 
 // 路由守卫组件
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-400">加载中...</div>
-      </div>
-    )
-  }
+  const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
 export default function App() {
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
 
-  // 登录页不显示导航
-  if (location.pathname === '/login') {
+  // 认证加载中 → 全屏 loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-lg shadow-brand-200 mb-4">
+            <ShoppingCart className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-gray-400 text-sm">加载中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 未登录 → 显示登录页
+  if (!user) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     )
+  }
+
+  // 已登录用户不应该看到登录页
+  if (location.pathname === '/login') {
+    return <Navigate to="/" replace />
   }
 
   // 获取当前页面标题
@@ -65,28 +77,26 @@ export default function App() {
             {isLoginRecords ? '登录记录' : currentTab?.label || '铺货通'}
           </span>
         </div>
-        {user && (
-          <div className="flex items-center gap-1">
-            {user.role === 'admin' && (
-              <NavLink
-                to="/login-records"
-                className={`p-2 rounded-lg transition-colors ${
-                  isLoginRecords ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:bg-gray-100'
-                }`}
-                title="登录记录"
-              >
-                <Shield className="w-5 h-5" strokeWidth={1.8} />
-              </NavLink>
-            )}
-            <button
-              onClick={logout}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-              title="退出登录"
+        <div className="flex items-center gap-1">
+          {user.role === 'admin' && (
+            <NavLink
+              to="/login-records"
+              className={`p-2 rounded-lg transition-colors ${
+                isLoginRecords ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:bg-gray-100'
+              }`}
+              title="登录记录"
             >
-              <LogOut className="w-5 h-5" strokeWidth={1.8} />
-            </button>
-          </div>
-        )}
+              <Shield className="w-5 h-5" strokeWidth={1.8} />
+            </NavLink>
+          )}
+          <button
+            onClick={logout}
+            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            title="退出登录"
+          >
+            <LogOut className="w-5 h-5" strokeWidth={1.8} />
+          </button>
+        </div>
       </header>
 
       {/* 主内容 */}
