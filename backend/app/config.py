@@ -36,6 +36,11 @@ class AppConfig(BaseSettings):
     secret_key: str = "change-me-in-production"
     cors_origins: list[str] = ["*"]
 
+    # JWT
+    jwt_secret_key: str = "change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 1440  # 24 小时
+
     # 服务
     host: str = "0.0.0.0"
     port: int = 8000

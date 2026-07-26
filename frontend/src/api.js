@@ -5,10 +5,16 @@ const BASE = window.location.hostname === 'localhost'
   ? '/api'
   : 'https://pds-tool.onrender.com/api'
 
+let _token = null
+
 async function request(path, options = {}) {
   const opts = {
     headers: { 'Content-Type': 'application/json' },
     ...options,
+  }
+  // 自动附加 token
+  if (_token) {
+    opts.headers['Authorization'] = `Bearer ${_token}`
   }
   if (opts.body && typeof opts.body !== 'string') {
     opts.body = JSON.stringify(opts.body)
@@ -24,16 +30,27 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // dashboard
+  // === 认证 ===
+  setToken: (token) => { _token = token },
+  login: (username, password) =>
+    request('/auth/login', { method: 'POST', body: { username, password } }),
+  register: (username, password) =>
+    request('/auth/register', { method: 'POST', body: { username, password } }),
+  me: () => request('/auth/me'),
+  loginRecords: (page = 1, pageSize = 50) =>
+    request(`/auth/login-records?page=${page}&page_size=${pageSize}`),
+  loginStats: () => request('/auth/login-stats'),
+
+  // === dashboard ===
   stats: () => request('/dashboard/stats'),
 
-  // sourcing
+  // === sourcing ===
   search: (body) => request('/sourcing/search', { method: 'POST', body }),
   importOffer: (offer) => request('/sourcing/import', { method: 'POST', body: { offer } }),
   batchImport: (offers) => request('/sourcing/import/batch', { method: 'POST', body: { offers } }),
   refresh: (id) => request(`/sourcing/refresh/${id}`, { method: 'POST' }),
 
-  // products
+  // === products ===
   products: (params = {}) => {
     const q = new URLSearchParams(params).toString()
     return request(`/products${q ? '?' + q : ''}`)
@@ -45,7 +62,7 @@ export const api = {
   mapBatch: (body) => request('/products/map/batch', { method: 'POST', body }),
   productStats: () => request('/products/stats/summary'),
 
-  // tasks
+  // === tasks ===
   tasks: () => request('/tasks'),
   task: (id) => request(`/tasks/${id}`),
   createTask: (body) => request('/tasks', { method: 'POST', body }),
@@ -58,7 +75,7 @@ export const api = {
   },
   taskLogs: (id) => request(`/tasks/${id}/logs`),
 
-  // settings
+  // === settings ===
   settings: () => request('/settings'),
   setSettings: (items, category) => request('/settings', { method: 'PUT', body: { items, category } }),
   testConnection: (platform) => request(`/settings/test/${platform}`),

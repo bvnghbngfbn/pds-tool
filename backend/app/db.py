@@ -20,7 +20,7 @@ async def init_db() -> None:
 
 
 async def seed_defaults() -> None:
-    """写入默认设置项。"""
+    """写入默认设置项和默认管理员用户。"""
     defaults = {
         "alibaba_app_key": ("", "alibaba"),
         "alibaba_app_secret": ("", "alibaba"),
@@ -39,6 +39,19 @@ async def seed_defaults() -> None:
             existing = await db.get(models.Setting, key)
             if not existing:
                 db.add(models.Setting(key=key, value=val, category=cat))
+
+        # 默认管理员用户
+        from .auth import hash_password
+        existing_admin = await db.execute(
+            select(models.User).where(models.User.username == "admin")
+        )
+        if not existing_admin.scalar_one_or_none():
+            db.add(models.User(
+                username="admin",
+                password_hash=hash_password("admin123"),
+                role="admin",
+            ))
+
         await db.commit()
 
 

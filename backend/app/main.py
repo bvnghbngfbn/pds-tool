@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import settings, STATIC_DIR
 from .db import init_db
 from .scheduler import start_scheduler, stop_scheduler
-from .api import sourcing, products, tasks, settings as settings_api, dashboard
+from .api import sourcing, products, tasks, settings as settings_api, dashboard, auth
 
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.add_middleware(
 
 # 路由
 app.include_router(dashboard.router)
+app.include_router(auth.router)
 app.include_router(sourcing.router)
 app.include_router(products.router)
 app.include_router(tasks.router)

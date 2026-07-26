@@ -1,12 +1,15 @@
-import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Search, Package, Zap, Settings, ShoppingCart,
+  LayoutDashboard, Search, Package, Zap, Settings, ShoppingCart, Shield, LogOut,
 } from 'lucide-react'
+import { useAuth } from './contexts/AuthContext.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Sourcing from './pages/Sourcing.jsx'
 import Products from './pages/Products.jsx'
 import Tasks from './pages/Tasks.jsx'
 import SettingsPage from './pages/Settings.jsx'
+import Login from './pages/Login.jsx'
+import LoginRecords from './pages/LoginRecords.jsx'
 
 const tabs = [
   { to: '/', label: '首页', icon: LayoutDashboard, end: true },
@@ -16,40 +19,92 @@ const tabs = [
   { to: '/settings', label: '设置', icon: Settings },
 ]
 
+// 路由守卫组件
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-400">加载中...</div>
+      </div>
+    )
+  }
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
 export default function App() {
   const location = useLocation()
+  const { user, logout } = useAuth()
+
+  // 登录页不显示导航
+  if (location.pathname === '/login') {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
+  }
 
   // 获取当前页面标题
   const currentTab = tabs.find(t =>
     t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)
   )
+  const isLoginRecords = location.pathname === '/login-records'
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-[640px] mx-auto">
-      {/* 顶栏 - 显示当前页面标题 */}
-      <header className="sticky top-0 z-20 bg-white border-b border-gray-200 h-14 flex items-center justify-center shrink-0">
+      {/* 顶栏 */}
+      <header className="sticky top-0 z-20 bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
             <ShoppingCart className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-gray-800">{currentTab?.label || '铺货通'}</span>
+          <span className="font-bold text-gray-800">
+            {isLoginRecords ? '登录记录' : currentTab?.label || '铺货通'}
+          </span>
         </div>
+        {user && (
+          <div className="flex items-center gap-1">
+            {user.role === 'admin' && (
+              <NavLink
+                to="/login-records"
+                className={`p-2 rounded-lg transition-colors ${
+                  isLoginRecords ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+                title="登录记录"
+              >
+                <Shield className="w-5 h-5" strokeWidth={1.8} />
+              </NavLink>
+            )}
+            <button
+              onClick={logout}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+              title="退出登录"
+            >
+              <LogOut className="w-5 h-5" strokeWidth={1.8} />
+            </button>
+          </div>
+        )}
       </header>
 
-      {/* 主内容 - 底部留出 Tab 栏高度 */}
+      {/* 主内容 */}
       <main className="flex-1 pb-20 overflow-y-auto">
         <div className="p-4">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/sourcing" element={<Sourcing />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/sourcing" element={<ProtectedRoute><Sourcing /></ProtectedRoute>} />
+            <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/login-records" element={<ProtectedRoute><LoginRecords /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </main>
 
-      {/* 底部 Tab 导航 - APP 风格 */}
+      {/* 底部 Tab 导航 */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 safe-area-bottom">
         <div className="max-w-[640px] mx-auto h-16 flex items-center justify-around px-1">
           {tabs.map((t) => (

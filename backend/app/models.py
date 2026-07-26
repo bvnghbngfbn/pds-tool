@@ -6,6 +6,8 @@
 - PushRecord: 单条商品铺货执行记录
 - Setting: 平台凭证与全局参数（KV）
 - TaskLog: 任务执行日志
+- User: 系统用户
+- LoginRecord: 登录记录
 """
 from __future__ import annotations
 
@@ -154,3 +156,37 @@ class TaskLog(Base):
     level: Mapped[str] = mapped_column(String(16), default="INFO")
     message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), default=UserRole.USER.value)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    login_records: Mapped[list["LoginRecord"]] = relationship(back_populates="user")
+
+
+class LoginRecord(Base):
+    __tablename__ = "login_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(64), default="")
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    user_agent: Mapped[str] = mapped_column(String(512), default="")
+    success: Mapped[bool] = mapped_column(Boolean, default=True)
+    message: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    user: Mapped["User"] = relationship(back_populates="login_records")
