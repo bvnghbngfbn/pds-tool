@@ -7,5 +7,20 @@ services:
     envVars:
       - key: PDS_SECRET_KEY
         generateValue: true
+      - key: PDS_JWT_SECRET_KEY
+        generateValue: true
       - key: PYTHON_VERSION
         value: 3.11.0
+      # QQ邮箱 SMTP
+      - key: PDS_SMTP_HOST
+        value: smtp.qq.com
+      - key: PDS_SMTP_PORT
+        value: "587"
+      - key: PDS_SMTP_USER
+        value: 3055350939@qq.com
+      - key: PDS_SMTP_PASSWORD
+        value: chsngdwjvavvdcjf
+      - key: PDS_SMTP_FROM
+        value: 3055350939@qq.com
+      - key: PDS_SMTP_USE_TLS
+        value: "true"

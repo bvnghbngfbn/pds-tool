@@ -1,4 +1,5 @@
 .uploads/
+backend/.env
 backend/data/pds.db
 backend/data/exports/
 backend/__pycache__/
