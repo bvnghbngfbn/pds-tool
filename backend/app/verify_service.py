@@ -1,4 +1,4 @@
-"""验证码发送服务：邮件(SMTP) + 阿里云短信。"""
+"""验证码发送服务：邮件(SMTP) + 阿里云短信认证。"""
 from __future__ import annotations
 
 import logging
@@ -108,7 +108,7 @@ async def send_email_code(email: str) -> str:
 
 async def send_sms_code(phone: str) -> str:
     """
-    发送短信验证码（阿里云短信服务）。
+    发送短信验证码（阿里云号码认证服务，无需签名和模板）。
     返回验证码（用于测试/日志），实际通过阿里云 SDK 发送。
     """
     code = _generate_code()
@@ -116,27 +116,27 @@ async def send_sms_code(phone: str) -> str:
     # 保存到数据库
     await _save_code(phone, code, "sms")
 
-    # 如果配置了阿里云短信，发送
-    if settings.aliyun_access_key_id and settings.aliyun_sms_template_code:
+    # 如果配置了阿里云短信认证，发送
+    if settings.aliyun_access_key_id and settings.aliyun_access_key_secret:
         try:
-            from alibabacloud_dysmsapi20170525.client import Client as SmsClient
+            from alibabacloud_dypnsapi20170525.client import Client as DypnsClient
             from alibabacloud_tea_openapi import models as open_api_models
-            from alibabacloud_dysmsapi20170525 import models as sms_models
+            from alibabacloud_dypnsapi20170525 import models as dypnsapi_models
 
             config = open_api_models.Config(
                 access_key_id=settings.aliyun_access_key_id,
                 access_key_secret=settings.aliyun_access_key_secret,
             )
-            config.endpoint = "dysmsapi.aliyuncs.com"
-            client = SmsClient(config)
+            config.endpoint = "dypnsapi.aliyuncs.com"
+            client = DypnsClient(config)
 
-            req = sms_models.SendSmsRequest(
-                phone_numbers=phone,
-                sign_name=settings.aliyun_sms_sign_name,
-                template_code=settings.aliyun_sms_template_code,
+            req = dypnsapi_models.SendSmsVerifyCodeRequest(
+                phone_number=phone,
                 template_param=f'{{"code":"{code}"}}',
+                code_type=6,
+                valid_time=settings.verify_code_expire_minutes * 60,
             )
-            await client.send_sms_with_options_async(req, None)
+            await client.send_sms_verify_code_with_options_async(req, None)
 
             logger.info(f"短信验证码已发送至 {phone}")
         except Exception as e:

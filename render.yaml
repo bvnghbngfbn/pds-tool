@@ -22,14 +22,10 @@ services:
         value: 3055350939@qq.com
       - key: PDS_SMTP_USE_TLS
         value: "true"
-      # 阿里云短信（请在 Render 后台填入真实值）
+      # 阿里云短信认证（号码认证服务，请在 Render 后台填入真实值）
       - key: PDS_ALIYUN_ACCESS_KEY_ID
         sync: false
       - key: PDS_ALIYUN_ACCESS_KEY_SECRET
-        sync: false
-      - key: PDS_ALIYUN_SMS_SIGN_NAME
-        value: 铺货通
-      - key: PDS_ALIYUN_SMS_TEMPLATE_CODE
         sync: false
       # QQ邮箱 SMTP 密码（请在 Render 后台填入真实值）
       - key: PDS_SMTP_PASSWORD
