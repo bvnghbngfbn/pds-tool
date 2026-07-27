@@ -10,10 +10,16 @@ from __future__ import annotations
 import json
 import re
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
+from ..security import validate_url
+
 OFFER_URL = "https://detail.1688.com/offer/{offer_id}.html"
+
+# 允许的 1688 域名
+ALLOWED_1688_DOMAINS = {"1688.com", "detail.1688.com", "alicdn.com"}
 
 # 常见嵌入字段名
 _DATA_PATTERNS = [
@@ -53,7 +59,6 @@ def _extract_images(obj: Any) -> list[str]:
     elif isinstance(obj, list):
         for it in obj:
             imgs.extend(_extract_images(it))
-    # 补全协议
     out = []
     for u in imgs:
         if u.startswith("//"):
@@ -82,8 +87,13 @@ def _deep_find(obj: Any, keys: tuple[str, ...]) -> Any:
 
 
 async def parse_offer(offer_id: str, timeout: float = 15.0) -> dict:
-    """解析 1688 offer 详情页。"""
+    """解析 1688 offer 详情页（SSRF 安全：仅允许 1688 域名）。"""
     url = OFFER_URL.format(offer_id=offer_id)
+
+    # SSRF 防护：确保 URL 是合法的 1688 地址
+    if not validate_url(url, ALLOWED_1688_DOMAINS):
+        raise ParseError(f"不安全的 URL: {url}")
+
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -104,7 +114,6 @@ async def parse_offer(offer_id: str, timeout: float = 15.0) -> dict:
 
 
 def _parse_html(html: str, offer_id: str) -> dict:
-    # 1) 尝试提取嵌入 JSON
     blob = None
     for pat in _DATA_PATTERNS:
         m = pat.search(html)
@@ -130,7 +139,6 @@ def _parse_html(html: str, offer_id: str) -> dict:
         category = _deep_find(blob, ("categoryName", "category")) or ""
         seller = _deep_find(blob, ("supplierLoginId", "companyName", "loginId")) or ""
 
-    # 2) 兜底：从 meta / title 标签提取
     if not title:
         m = re.search(r"<title>(.*?)</title>", html)
         if m:

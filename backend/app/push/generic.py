@@ -11,6 +11,7 @@ from typing import Any
 import httpx
 
 from .base import PushTarget, PushResult, register_target
+from ..security import validate_url
 
 
 @register_target("generic")
@@ -22,6 +23,11 @@ class GenericTarget(PushTarget):
         self.api_url = (config.get("api_url") or "").strip()
         self.api_key = config.get("api_key") or ""
         self.auth_header = config.get("auth_header") or "X-API-Key"
+
+        # SSRF 防护：仅允许 https URL，且不能是内网地址
+        if self.api_url and not validate_url(self.api_url):
+            self.api_url = ""
+
         self._http = httpx.AsyncClient(timeout=30.0)
 
     async def push(self, mapped_data: dict) -> PushResult:
@@ -46,7 +52,7 @@ class GenericTarget(PushTarget):
             if resp.status_code in (200, 201, 202):
                 try:
                     data = resp.json()
-                except Exception:  # noqa: BLE001
+                except Exception:
                     data = {"raw": resp.text[:500]}
                 item_id = str(data.get("id") or data.get("product_id") or data.get("item_id") or "")
                 item_url = data.get("url") or data.get("link") or ""

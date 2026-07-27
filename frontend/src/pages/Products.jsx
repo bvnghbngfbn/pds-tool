@@ -243,13 +243,14 @@ function DetailDrawer({ product, onClose }) {
           {full?.mapped_data && (
             <div>
               <div className="text-xs font-medium text-gray-500 mb-1">转换后描述（预览）</div>
-              <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: full.mapped_data.body_html?.slice(0, 500) || '' }} />
+              <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                {full.mapped_data.body_html?.replace(/<[^>]*>/g, '').slice(0, 500) || '暂无描述'}
+              </div>
             </div>
           )}
           <div>
             <div className="text-xs font-medium text-gray-500 mb-1">源链接</div>
-            <a href={full?.source_url} target="_blank" rel="noreferrer" className="text-sm text-brand-600 hover:underline break-all">
+            <a href={full?.source_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 hover:underline break-all">
               {full?.source_url}
             </a>
           </div>

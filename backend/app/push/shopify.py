@@ -11,8 +11,12 @@ from typing import Any
 import httpx
 
 from .base import PushTarget, PushResult, register_target
+from ..security import validate_url
 
 API_VERSION = "2024-01"
+
+# Shopify 允许的域名
+SHOPIFY_DOMAINS = {"myshopify.com", "shopify.com"}
 
 
 @register_target("shopify")
@@ -26,6 +30,9 @@ class ShopifyTarget(PushTarget):
         self.location_id = config.get("location_id") or ""
         if self.shop and not self.shop.startswith("http"):
             self.shop = f"https://{self.shop}"
+        # SSRF 防护：校验 shop URL
+        if self.shop and not validate_url(self.shop, SHOPIFY_DOMAINS):
+            self.shop = ""
         self._http = httpx.AsyncClient(timeout=30.0)
 
     def _base(self) -> str:
@@ -63,7 +70,6 @@ class ShopifyTarget(PushTarget):
             if resp.status_code in (200, 201):
                 data = resp.json().get("product", {})
                 gid = str(data.get("id", ""))
-                # 设置库存（如指定 location）
                 if self.location_id and gid:
                     try:
                         inv_id = (data.get("variants") or [{}])[0].get("inventory_item_id")
@@ -75,7 +81,7 @@ class ShopifyTarget(PushTarget):
                                       "available": int(mapped_data.get("inventory", 0) or 0)},
                                 headers={"X-Shopify-Access-Token": self.token},
                             )
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         pass
                 url = f"{self.shop}/products/{gid}" if gid else ""
                 return PushResult(True, target_item_id=gid, target_item_url=url,

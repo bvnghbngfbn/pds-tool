@@ -91,7 +91,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     if (!username.trim() || !password.trim()) { setError('请填写用户名和密码'); return }
-    if (password.length < 4) { setError('密码至少 4 位'); return }
+    if (password.length < 8) { setError('密码至少 8 位，需包含大小写字母和数字'); return }
     setLoading(true)
     try {
       isRegister ? await register(username.trim(), password) : await login(username.trim(), password)
@@ -105,7 +105,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     if (!email.trim() || !emailCode.trim()) { setError('请填写邮箱和验证码'); return }
-    if (isRegister && emailPwd.length < 4) { setError('密码至少 4 位'); return }
+    if (isRegister && emailPwd.length < 8) { setError('密码至少 8 位，需包含大小写字母和数字'); return }
     setLoading(true)
     try {
       if (isRegister) {
@@ -123,7 +123,7 @@ export default function Login() {
     e.preventDefault()
     setError('')
     if (!phone.trim() || !smsCode.trim()) { setError('请填写手机号和验证码'); return }
-    if (isRegister && phonePwd.length < 4) { setError('密码至少 4 位'); return }
+    if (isRegister && phonePwd.length < 8) { setError('密码至少 8 位，需包含大小写字母和数字'); return }
     setLoading(true)
     try {
       if (isRegister) {

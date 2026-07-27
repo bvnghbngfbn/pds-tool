@@ -6,8 +6,9 @@
 - PushRecord: 单条商品铺货执行记录
 - Setting: 平台凭证与全局参数（KV）
 - TaskLog: 任务执行日志
-- User: 系统用户
+- User: 系统用户（含账户锁定字段）
 - LoginRecord: 登录记录
+- VerificationCode: 验证码
 """
 from __future__ import annotations
 
@@ -25,17 +26,17 @@ class Base(DeclarativeBase):
 
 
 class ProductStatus(str, enum.Enum):
-    SOURCED = "sourced"        # 已采集入库
-    MAPPED = "mapped"          # 字段映射完成
-    PENDING = "pending"        # 待铺货
-    PUSHED = "pushed"          # 已铺货
+    SOURCED = "sourced"
+    MAPPED = "mapped"
+    PENDING = "pending"
+    PUSHED = "pushed"
     FAILED = "failed"
     ARCHIVED = "archived"
 
 
 class PushTaskType(str, enum.Enum):
-    ONCE = "once"              # 立即/一次性
-    SCHEDULED = "scheduled"    # 定时
+    ONCE = "once"
+    SCHEDULED = "scheduled"
 
 class PushTaskStatus(str, enum.Enum):
     IDLE = "idle"
@@ -60,24 +61,22 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    source_offer_id: Mapped[str] = mapped_column(String(64), index=True)  # 1688 offerId
+    source_offer_id: Mapped[str] = mapped_column(String(64), index=True)
     source_url: Mapped[str] = mapped_column(Text, default="")
     title: Mapped[str] = mapped_column(String(512), default="")
     status: Mapped[str] = mapped_column(String(32), default=ProductStatus.SOURCED.value, index=True)
 
-    # 1688 原始数据
     raw_data: Mapped[dict] = mapped_column(JSON, default=dict)
-    # 转换后用于铺货的数据
     mapped_data: Mapped[dict] = mapped_column(JSON, default=dict)
 
     price: Mapped[float] = mapped_column(Float, default=0.0)
     stock: Mapped[int] = mapped_column(Integer, default=0)
-    image_urls: Mapped[str] = mapped_column(Text, default="")  # JSON string
+    image_urls: Mapped[str] = mapped_column(Text, default="")
     category_source: Mapped[str] = mapped_column(String(128), default="")
     category_target: Mapped[str] = mapped_column(String(128), default="")
 
     tags: Mapped[str] = mapped_column(String(256), default="")
-    markup_ratio: Mapped[float] = mapped_column(Float, default=1.0)  # 加价倍率
+    markup_ratio: Mapped[float] = mapped_column(Float, default=1.0)
     source_seller: Mapped[str] = mapped_column(String(128), default="")
 
     error: Mapped[str] = mapped_column(Text, default="")
@@ -96,21 +95,18 @@ class PushTask(Base):
     status: Mapped[str] = mapped_column(String(16), default=PushTaskStatus.IDLE.value, index=True)
 
     target_type: Mapped[str] = mapped_column(String(16), default=PushTargetType.SHOPIFY.value)
-    target_config: Mapped[dict] = mapped_column(JSON, default=dict)  # 目标平台连接配置
+    target_config: Mapped[dict] = mapped_column(JSON, default=dict)
 
-    # 商品筛选条件
     filter_category: Mapped[str] = mapped_column(String(128), default="")
     filter_keyword: Mapped[str] = mapped_column(String(128), default="")
     filter_tags: Mapped[str] = mapped_column(String(256), default="")
     filter_status: Mapped[str] = mapped_column(String(32), default=ProductStatus.PENDING.value)
     limit: Mapped[int] = mapped_column(Integer, default=50)
 
-    # 加价与映射策略
     markup_ratio: Mapped[float] = mapped_column(Float, default=1.3)
     auto_map_category: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    # 定时配置
-    cron_expr: Mapped[str] = mapped_column(String(64), default="")  # 空=不调度
+    cron_expr: Mapped[str] = mapped_column(String(64), default="")
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -175,6 +171,11 @@ class User(Base):
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     role: Mapped[str] = mapped_column(String(16), default=UserRole.USER.value)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # 账户安全
+    login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -185,9 +186,9 @@ class VerificationCode(Base):
     __tablename__ = "verification_codes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    target: Mapped[str] = mapped_column(String(128), index=True, nullable=False)  # 邮箱或手机号
+    target: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
     code: Mapped[str] = mapped_column(String(8), nullable=False)
-    code_type: Mapped[str] = mapped_column(String(16), default="email")  # email / sms
+    code_type: Mapped[str] = mapped_column(String(16), default="email")
     used: Mapped[bool] = mapped_column(Boolean, default=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

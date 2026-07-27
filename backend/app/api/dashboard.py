@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
+from ..auth import get_current_user
 from ..db import AsyncSessionLocal
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -17,21 +18,21 @@ async def get_db():
 
 
 @router.get("/stats")
-async def stats(db: AsyncSession = Depends(get_db)):
-    # 商品状态分布
+async def stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     p_rows = (await db.execute(
         select(models.Product.status, func.count(models.Product.id)).group_by(models.Product.status)
     )).all()
     products_by_status = {r[0]: r[1] for r in p_rows}
     product_total = sum(products_by_status.values())
 
-    # 任务统计
     t_rows = (await db.execute(
         select(models.PushTask.status, func.count(models.PushTask.id)).group_by(models.PushTask.status)
     )).all()
     tasks_by_status = {r[0]: r[1] for r in t_rows}
 
-    # 铺货记录统计
     r_rows = (await db.execute(
         select(models.PushRecord.status, func.count(models.PushRecord.id)).group_by(models.PushRecord.status)
     )).all()
@@ -41,7 +42,6 @@ async def stats(db: AsyncSession = Depends(get_db)):
 
     success_rate = round(push_success / push_total * 100, 1) if push_total else 0.0
 
-    # 最近 7 天铺货趋势
     from datetime import datetime, timedelta
     trend = []
     for i in range(6, -1, -1):

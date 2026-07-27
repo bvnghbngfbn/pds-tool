@@ -7,25 +7,17 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // 初始化时从 localStorage 恢复 token
+  // 初始化时通过 httpOnly Cookie 验证登录状态
   useEffect(() => {
-    const token = localStorage.getItem('pds_token')
-    if (token) {
-      api.setToken(token)
-      api.me()
-        .then((u) => setUser(u))
-        .catch(() => {
-          localStorage.removeItem('pds_token')
-          api.setToken(null)
-        })
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
-    }
+    api.me()
+      .then((u) => setUser(u))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false))
   }, [])
 
   const _persist = (result) => {
-    localStorage.setItem('pds_token', result.access_token)
+    // Token 已通过 httpOnly Cookie 自动存储，无需手动管理
+    // 仅保留内存中的 token 引用作为 Authorization header 的备用方案
     api.setToken(result.access_token)
     setUser({ id: 0, username: result.username, role: result.role })
     return result
@@ -40,8 +32,8 @@ export function AuthProvider({ children }) {
   const loginPhone = useCallback(async (phone, code) => _persist(await api.loginPhone(phone, code)), [])
   const registerPhone = useCallback(async (phone, code, password) => _persist(await api.registerPhone(phone, code, password)), [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('pds_token')
+  const logout = useCallback(async () => {
+    try { await api.logout() } catch { /* ignore */ }
     api.setToken(null)
     setUser(null)
   }, [])

@@ -26,7 +26,12 @@ class CsvTarget(PushTarget):
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
-        self.export_dir = config.get("export_dir") or str(DATA_DIR / "exports")
+        raw_dir = config.get("export_dir") or str(DATA_DIR / "exports")
+        # 路径遍历防护：规范化路径并确保在 DATA_DIR 内
+        self.export_dir = os.path.normpath(os.path.abspath(raw_dir))
+        allowed_base = os.path.normpath(os.path.abspath(str(DATA_DIR)))
+        if not self.export_dir.startswith(allowed_base):
+            self.export_dir = str(DATA_DIR / "exports")
         os.makedirs(self.export_dir, exist_ok=True)
         ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         self.filepath = os.path.join(self.export_dir, f"pds_export_{ts}.csv")

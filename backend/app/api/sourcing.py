@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import get_current_user
 from ..db import AsyncSessionLocal
+from ..models import User
 from ..sourcing import service as sourcing_service
 
 router = APIRouter(prefix="/api/sourcing", tags=["sourcing"])
@@ -34,7 +36,10 @@ class BatchImportReq(BaseModel):
 
 
 @router.post("/search")
-async def search(req: SearchReq):
+async def search(
+    req: SearchReq,
+    current_user: User = Depends(get_current_user),
+):
     return await sourcing_service.search(
         keyword=req.keyword, category_id=req.category_id, page=req.page,
         page_size=req.page_size, price_min=req.price_min, price_max=req.price_max,
@@ -42,18 +47,30 @@ async def search(req: SearchReq):
 
 
 @router.post("/import")
-async def import_offer(req: ImportReq, db: AsyncSession = Depends(get_db)):
+async def import_offer(
+    req: ImportReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     product = await sourcing_service.import_offer(db, req.offer)
     return _serialize_product(product)
 
 
 @router.post("/import/batch")
-async def batch_import(req: BatchImportReq, db: AsyncSession = Depends(get_db)):
+async def batch_import(
+    req: BatchImportReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return await sourcing_service.batch_import(db, req.offers)
 
 
 @router.post("/refresh/{product_id}")
-async def refresh(product_id: int, db: AsyncSession = Depends(get_db)):
+async def refresh(
+    product_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     product = await sourcing_service.refresh_product(db, product_id)
     return _serialize_product(product)
 

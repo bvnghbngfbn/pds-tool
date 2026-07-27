@@ -10,6 +10,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
+from ..auth import get_current_user
 from ..db import AsyncSessionLocal
 from ..push import runner
 from ..scheduler import schedule_task_now
@@ -24,8 +25,8 @@ async def get_db():
 
 class CreateTaskReq(BaseModel):
     name: str
-    task_type: str = "once"          # once | scheduled
-    target_type: str = "shopify"     # shopify | generic | csv
+    task_type: str = "once"
+    target_type: str = "shopify"
     target_config: dict = {}
     filter_category: str = ""
     filter_keyword: str = ""
@@ -53,14 +54,21 @@ class UpdateTaskReq(BaseModel):
 
 
 @router.get("")
-async def list_tasks(db: AsyncSession = Depends(get_db)):
+async def list_tasks(
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     stmt = select(models.PushTask).order_by(models.PushTask.id.desc())
     result = await db.execute(stmt)
     return [_serialize_task(t) for t in result.scalars().all()]
 
 
 @router.get("/{task_id}")
-async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
+async def get_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     t = await db.get(models.PushTask, task_id)
     if not t:
         raise HTTPException(404, "任务不存在")
@@ -68,7 +76,11 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("")
-async def create_task(req: CreateTaskReq, db: AsyncSession = Depends(get_db)):
+async def create_task(
+    req: CreateTaskReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     t = models.PushTask(
         name=req.name, task_type=req.task_type, target_type=req.target_type,
         target_config=req.target_config, filter_category=req.filter_category,
@@ -87,7 +99,12 @@ async def create_task(req: CreateTaskReq, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{task_id}")
-async def update_task(task_id: int, req: UpdateTaskReq, db: AsyncSession = Depends(get_db)):
+async def update_task(
+    task_id: int,
+    req: UpdateTaskReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     t = await db.get(models.PushTask, task_id)
     if not t:
         raise HTTPException(404, "任务不存在")
@@ -103,7 +120,11 @@ async def update_task(task_id: int, req: UpdateTaskReq, db: AsyncSession = Depen
 
 
 @router.delete("/{task_id}")
-async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     t = await db.get(models.PushTask, task_id)
     if not t:
         raise HTTPException(404, "任务不存在")
@@ -113,7 +134,11 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{task_id}/run")
-async def run_task(task_id: int, background: BackgroundTasks):
+async def run_task(
+    task_id: int,
+    background: BackgroundTasks,
+    current_user: models.User = Depends(get_current_user),
+):
     """立即执行任务（后台异步）。"""
     background.add_task(_safe_run, task_id)
     return {"ok": True, "message": "任务已加入后台执行"}
@@ -122,7 +147,7 @@ async def run_task(task_id: int, background: BackgroundTasks):
 async def _safe_run(task_id: int):
     try:
         await runner.run_task(task_id)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         async with AsyncSessionLocal() as db:
             db.add(models.TaskLog(task_id=task_id, level="ERROR", message=f"手动执行失败: {e}"))
             await db.commit()
@@ -135,6 +160,7 @@ async def task_records(
     page: int = 1,
     page_size: int = 50,
     db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
     stmt = select(models.PushRecord).where(models.PushRecord.task_id == task_id)
     if status:
@@ -150,7 +176,12 @@ async def task_records(
 
 
 @router.get("/{task_id}/logs")
-async def task_logs(task_id: int, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def task_logs(
+    task_id: int,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     stmt = (select(models.TaskLog).where(models.TaskLog.task_id == task_id)
             .order_by(models.TaskLog.id.desc()).limit(limit))
     result = await db.execute(stmt)

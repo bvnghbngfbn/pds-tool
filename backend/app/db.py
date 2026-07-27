@@ -1,6 +1,7 @@
 """数据库会话与初始化。"""
 from __future__ import annotations
 
+import secrets
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import select
@@ -20,7 +21,7 @@ async def init_db() -> None:
 
 
 async def seed_defaults() -> None:
-    """写入默认设置项和默认管理员用户。"""
+    """写入默认设置项和默认管理员用户（首次启动生成随机密码）。"""
     defaults = {
         "alibaba_app_key": ("", "alibaba"),
         "alibaba_app_secret": ("", "alibaba"),
@@ -40,17 +41,26 @@ async def seed_defaults() -> None:
             if not existing:
                 db.add(models.Setting(key=key, value=val, category=cat))
 
-        # 默认管理员用户
+        # 默认管理员用户 — 首次启动生成随机安全密码
         from .auth import hash_password
         existing_admin = await db.execute(
             select(models.User).where(models.User.username == "admin")
         )
         if not existing_admin.scalar_one_or_none():
+            # 生成随机密码（12 位），仅在控制台日志输出
+            import logging
+            logger = logging.getLogger(__name__)
+            admin_password = secrets.token_urlsafe(10)
             db.add(models.User(
                 username="admin",
-                password_hash=hash_password("admin123"),
+                password_hash=hash_password(admin_password),
                 role="admin",
             ))
+            logger.warning("=" * 60)
+            logger.warning(f"  默认管理员账号: admin")
+            logger.warning(f"  默认管理员密码: {admin_password}")
+            logger.warning(f"  请立即登录并修改密码！")
+            logger.warning("=" * 60)
 
         await db.commit()
 

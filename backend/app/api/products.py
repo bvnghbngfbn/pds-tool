@@ -10,7 +10,9 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
+from ..auth import get_current_user
 from ..db import AsyncSessionLocal
+from ..security import sanitize_sql_like
 from ..transform import mapper as transform_mapper
 
 router = APIRouter(prefix="/api/products", tags=["products"])
@@ -49,18 +51,20 @@ async def list_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ):
     stmt = select(models.Product)
     if status:
         stmt = stmt.where(models.Product.status == status)
     if keyword:
-        stmt = stmt.where(models.Product.title.like(f"%{keyword}%"))
+        safe_kw = sanitize_sql_like(keyword)
+        stmt = stmt.where(models.Product.title.like(f"%{safe_kw}%", escape="\\"))
     if category:
+        safe_cat = sanitize_sql_like(category)
         stmt = stmt.where(
-            models.Product.category_source.contains(category)
-            | models.Product.category_target.contains(category)
+            models.Product.category_source.contains(safe_cat, escape="\\")
+            | models.Product.category_target.contains(safe_cat, escape="\\")
         )
-    # 总数
     count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
     total = (await db.execute(count_stmt)).scalar() or 0
     stmt = stmt.order_by(models.Product.id.desc()).offset((page - 1) * page_size).limit(page_size)
@@ -70,7 +74,11 @@ async def list_products(
 
 
 @router.get("/{product_id}")
-async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
+async def get_product(
+    product_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     p = await db.get(models.Product, product_id)
     if not p:
         raise HTTPException(404, "商品不存在")
@@ -78,7 +86,12 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{product_id}")
-async def update_product(product_id: int, req: UpdateProductReq, db: AsyncSession = Depends(get_db)):
+async def update_product(
+    product_id: int,
+    req: UpdateProductReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     p = await db.get(models.Product, product_id)
     if not p:
         raise HTTPException(404, "商品不存在")
@@ -91,7 +104,11 @@ async def update_product(product_id: int, req: UpdateProductReq, db: AsyncSessio
 
 
 @router.delete("/{product_id}")
-async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_product(
+    product_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     p = await db.get(models.Product, product_id)
     if not p:
         raise HTTPException(404, "商品不存在")
@@ -101,20 +118,31 @@ async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{product_id}/map")
-async def map_product(product_id: int, req: MapReq, db: AsyncSession = Depends(get_db)):
+async def map_product(
+    product_id: int,
+    req: MapReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     p = await transform_mapper.map_product(db, product_id, req.markup_ratio, req.auto_map, req.target_category)
     return _serialize(p, full=True)
 
 
 @router.post("/map/batch")
-async def map_batch(req: MapBatchReq, db: AsyncSession = Depends(get_db)):
+async def map_batch(
+    req: MapBatchReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     count = await transform_mapper.map_batch(db, req.product_ids, req.markup_ratio, req.auto_map)
     return {"mapped": count, "total": len(req.product_ids)}
 
 
 @router.get("/stats/summary")
-async def stats_summary(db: AsyncSession = Depends(get_db)):
-    """商品库状态分布。"""
+async def stats_summary(
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     stmt = select(models.Product.status, func.count(models.Product.id)).group_by(models.Product.status)
     rows = (await db.execute(stmt)).all()
     by_status = {r[0]: r[1] for r in rows}

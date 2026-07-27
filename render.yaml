@@ -2,31 +2,26 @@ services:
   - type: web
     name: pds-tool
     env: python
-    buildCommand: pip install -r backend/requirements.txt && cd frontend && npm install && npm run build
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port 10000
+    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build && cd ..
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PDS_SECRET_KEY
         generateValue: true
       - key: PDS_JWT_SECRET_KEY
         generateValue: true
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      # QQ邮箱 SMTP
+      - key: PDS_CORS_ORIGINS
+        sync: false
       - key: PDS_SMTP_HOST
-        value: smtp.qq.com
+        sync: false
       - key: PDS_SMTP_PORT
-        value: "587"
+        sync: false
       - key: PDS_SMTP_USER
-        value: 3055350939@qq.com
+        sync: false
+      - key: PDS_SMTP_PASSWORD
+        sync: false
       - key: PDS_SMTP_FROM
-        value: 3055350939@qq.com
-      - key: PDS_SMTP_USE_TLS
-        value: "true"
-      # 阿里云短信认证（号码认证服务，请在 Render 后台填入真实值）
+        sync: false
       - key: PDS_ALIYUN_ACCESS_KEY_ID
         sync: false
       - key: PDS_ALIYUN_ACCESS_KEY_SECRET
-        sync: false
-      # QQ邮箱 SMTP 密码（请在 Render 后台填入真实值）
-      - key: PDS_SMTP_PASSWORD
         sync: false

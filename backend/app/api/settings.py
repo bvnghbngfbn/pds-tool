@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import get_current_user
 from ..db import AsyncSessionLocal, SettingsService
+from ..models import User
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -21,10 +23,11 @@ class SetSettingsReq(BaseModel):
 
 
 @router.get("")
-async def get_settings():
+async def get_settings(
+    current_user: User = Depends(get_current_user),
+):
     all_items = await SettingsService.get_multi()
     grouped: dict[str, dict[str, str]] = {}
-    # 需要类别信息，重新按类别查
     from sqlalchemy import select
     from .. import models
     async with AsyncSessionLocal() as db:
@@ -35,13 +38,19 @@ async def get_settings():
 
 
 @router.put("")
-async def set_settings(req: SetSettingsReq):
+async def set_settings(
+    req: SetSettingsReq,
+    current_user: User = Depends(get_current_user),
+):
     await SettingsService.set_multi(req.items, req.category)
     return {"ok": True}
 
 
 @router.get("/test/{platform}")
-async def test_connection(platform: str):
+async def test_connection(
+    platform: str,
+    current_user: User = Depends(get_current_user),
+):
     """测试平台连通性。"""
     if platform == "alibaba":
         from ..sourcing.alibaba import AlibabaClient

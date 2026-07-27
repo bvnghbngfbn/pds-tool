@@ -4,6 +4,7 @@
 - 加价策略：按倍率计算目标售价
 - 类目映射：源类目 → 目标类目（基于关键词规则表）
 - 标题优化：去除 1688 站内营销词，拼装目标平台风格标题
+- XSS 防护：描述 HTML 通过安全清理
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
+from ..security import sanitize_html
 
 # 1688 标题常见营销噪音词，铺货时清理
 _NOISE_WORDS = [
@@ -44,7 +46,6 @@ def clean_title(title: str) -> str:
     if not title:
         return ""
     t = title
-    # 按长度降序替换，避免短词截断长词（如「代发」截断「一件代发」）
     for w in sorted(_NOISE_WORDS, key=len, reverse=True):
         t = t.replace(w, "")
     t = re.sub(r"【.*?】", "", t)
@@ -67,7 +68,6 @@ def compute_price(source_price: float, markup_ratio: float) -> float:
     if source_price <= 0:
         return 0.0
     target = source_price * markup_ratio
-    # 凑整到 .9 结尾（电商常见定价策略）
     return round(target, 0) - 0.1 if target > 10 else round(target, 2)
 
 
@@ -82,10 +82,14 @@ def transform(raw: dict, markup_ratio: float = 1.3, auto_map: bool = True,
     cat = target_category or (map_category(source_cat, title) if auto_map else source_cat)
     price = compute_price(float(raw.get("price", 0) or 0), markup_ratio)
 
+    # 构建并清理描述 HTML（XSS 防护）
+    body_html = _build_description(raw, images)
+    body_html = sanitize_html(body_html)
+
     return {
         "title": mapped_title,
         "original_title": title,
-        "body_html": _build_description(raw, images),
+        "body_html": body_html,
         "price": f"{price:.2f}",
         "source_price": float(raw.get("price", 0) or 0),
         "markup_ratio": markup_ratio,
@@ -101,7 +105,7 @@ def transform(raw: dict, markup_ratio: float = 1.3, auto_map: bool = True,
 
 
 def _build_description(raw: dict, images: list[str]) -> str:
-    """生成商品描述 HTML。"""
+    """生成商品描述 HTML（纯文本内容，不包含 raw 中的 HTML）。"""
     parts = [f"<p><strong>{clean_title(raw.get('title', ''))}</strong></p>"]
     if raw.get("specs"):
         parts.append("<p><strong>规格参数</strong></p><ul>")
@@ -145,7 +149,7 @@ async def map_batch(db: AsyncSession, product_ids: list[int], markup_ratio: floa
         try:
             await map_product(db, pid, markup_ratio, auto_map)
             count += 1
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
     return count
 

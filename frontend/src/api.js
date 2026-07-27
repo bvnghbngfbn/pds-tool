@@ -1,18 +1,17 @@
 // API 客户端封装
-// 本地开发：自动用 /api
-// 互联网访问：自动用 Render 后端地址
-const BASE = window.location.hostname === 'localhost'
-  ? '/api'
-  : 'https://pds-tool.onrender.com/api'
+// 开发环境：通过 Vite proxy 转发到后端
+// 生产环境：使用环境变量 VITE_API_BASE 或同源 /api
+const BASE = import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? '/api' : '/api')
 
 let _token = null
 
 async function request(path, options = {}) {
   const opts = {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // 发送 httpOnly Cookie
     ...options,
   }
-  // 自动附加 token
+  // 自动附加 token（兼容不支持 Cookie 的场景）
   if (_token) {
     opts.headers['Authorization'] = `Bearer ${_token}`
   }
@@ -52,6 +51,7 @@ export const api = {
   registerPhone: (phone, code, password) =>
     request('/auth/register-phone', { method: 'POST', body: { phone, code, password } }),
   me: () => request('/auth/me'),
+  logout: () => request('/auth/logout', { method: 'POST' }),
   loginRecords: (page = 1, pageSize = 50) =>
     request(`/auth/login-records?page=${page}&page_size=${pageSize}`),
   loginStats: () => request('/auth/login-stats'),

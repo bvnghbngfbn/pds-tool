@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..db import SettingsService
+from ..security import sanitize_sql_like
 from ..transform import mapper as transform_mapper
 from .base import get_target, PushResult
-from . import shopify  # noqa: F401  注册目标
+from . import shopify  # noqa: F401
 from . import generic  # noqa: F401
 from . import csv_export  # noqa: F401
 
@@ -28,20 +29,23 @@ async def _select_products(db: AsyncSession, task: models.PushTask) -> list[mode
              models.ProductStatus.SOURCED.value]
         ))
     if task.filter_category:
+        safe_cat = sanitize_sql_like(task.filter_category)
         stmt = stmt.where(
-            (models.Product.category_source.contains(task.filter_category))
-            | (models.Product.category_target.contains(task.filter_category))
+            (models.Product.category_source.contains(safe_cat, escape="\\"))
+            | (models.Product.category_target.contains(safe_cat, escape="\\"))
         )
     if task.filter_keyword:
-        kw = f"%{task.filter_keyword}%"
+        safe_kw = sanitize_sql_like(task.filter_keyword)
+        kw = f"%{safe_kw}%"
         stmt = stmt.where(
-            models.Product.title.like(kw) | models.Product.tags.like(kw)
+            models.Product.title.like(kw, escape="\\") | models.Product.tags.like(kw, escape="\\")
         )
     if task.filter_tags:
         for t in task.filter_tags.split(","):
             t = t.strip()
             if t:
-                stmt = stmt.where(models.Product.tags.like(f"%{t}%"))
+                safe_t = sanitize_sql_like(t)
+                stmt = stmt.where(models.Product.tags.like(f"%{safe_t}%", escape="\\"))
     stmt = stmt.limit(task.limit if task.limit > 0 else 50)
     result = await db.execute(stmt)
     return list(result.scalars().all())
@@ -67,7 +71,6 @@ async def _build_target_config(target_type: str) -> dict[str, Any]:
 
 async def run_task(task_id: int) -> dict:
     """执行一次铺货任务。返回统计。"""
-    # 用独立 session 避免长事务
     from ..db import AsyncSessionLocal
     async with AsyncSessionLocal() as db:
         task = await db.get(models.PushTask, task_id)
@@ -89,7 +92,6 @@ async def run_task(task_id: int) -> dict:
 
         try:
             for product in products:
-                # 确保有 mapped_data；没有则现场转换
                 if not product.mapped_data:
                     mapped = transform_mapper.transform(
                         product.raw_data or {},
