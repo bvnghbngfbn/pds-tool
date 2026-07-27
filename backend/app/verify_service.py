@@ -122,6 +122,7 @@ async def send_sms_code(phone: str) -> str:
             from alibabacloud_dypnsapi20170525.client import Client as DypnsClient
             from alibabacloud_tea_openapi import models as open_api_models
             from alibabacloud_dypnsapi20170525 import models as dypnsapi_models
+            from alibabacloud_tea_util import models as util_models
 
             config = open_api_models.Config(
                 access_key_id=settings.aliyun_access_key_id,
@@ -132,11 +133,13 @@ async def send_sms_code(phone: str) -> str:
 
             req = dypnsapi_models.SendSmsVerifyCodeRequest(
                 phone_number=phone,
+                sign_name=settings.aliyun_sms_sign_name,
+                template_code=settings.aliyun_sms_template_code,
                 template_param=f'{{"code":"{code}"}}',
-                code_type=6,
                 valid_time=settings.verify_code_expire_minutes * 60,
             )
-            await client.send_sms_verify_code_with_options_async(req, None)
+            runtime = util_models.RuntimeOptions()
+            await client.send_sms_verify_code_with_options_async(req, runtime)
 
             logger.info(f"短信验证码已发送至 {phone}")
         except Exception as e:

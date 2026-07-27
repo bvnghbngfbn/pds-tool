@@ -49,9 +49,11 @@ class AppConfig(BaseSettings):
     smtp_from: str = ""
     smtp_use_tls: bool = True
 
-    # 阿里云短信认证（号码认证服务，个人可用，无需签名模板）
+    # 阿里云短信认证（号码认证服务）
     aliyun_access_key_id: str = ""
     aliyun_access_key_secret: str = ""
+    aliyun_sms_sign_name: str = "恒创联众"
+    aliyun_sms_template_code: str = "SMS_337450304"
 
     # 验证码有效期（分钟）
     verify_code_expire_minutes: int = 5
