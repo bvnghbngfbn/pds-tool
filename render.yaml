@@ -2,7 +2,7 @@ services:
   - type: web
     name: pds-tool
     env: python
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: pip install -r backend/requirements.txt && cd frontend && npm install && npm run build
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port 10000
     envVars:
       - key: PDS_SECRET_KEY
