@@ -1,30 +1,34 @@
-#!/usr/bin/env bash
-# 铺货通一键启动脚本
+#!/bin/bash
+# 铺货通 Termux 一键启动脚本
 set -e
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
-cd "$ROOT"
+echo ">>> 更新代码..."
+cd ~/pds-tool
+git checkout -- . 2>/dev/null
+git pull origin main
 
-echo "=== 铺货通 启动 ==="
+echo ">>> 安装依赖..."
+cd ~/pds-tool/backend
+pip install -q fastapi uvicorn sqlalchemy aiosqlite httpx apscheduler pydantic pydantic-settings python-multipart PyYAML python-jose passlib bcrypt 2>&1 | tail -3
 
-# 1. 后端依赖
-echo "[1/3] 安装后端依赖..."
-pip install -q --break-system-packages -r backend/requirements.txt 2>/dev/null || true
+echo ">>> 启动后端..."
+# 先杀掉旧进程
+pkill -f "uvicorn app.main" 2>/dev/null || true
+sleep 1
 
-# 2. 前端构建（如未构建或源码更新）
-if [ ! -f backend/static/index.html ] || [ frontend/src -nt backend/static/index.html ]; then
-  echo "[2/3] 构建前端..."
-  cd frontend
-  [ -d node_modules ] || npm install --silent 2>/dev/null
-  npm run build --silent 2>/dev/null
-  cd "$ROOT"
+# 启动后端
+nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/pds.log 2>&1 &
+sleep 3
+
+# 检查是否启动成功
+if pgrep -f "uvicorn app.main" > /dev/null; then
+    echo ">>> 后端启动成功！"
 else
-  echo "[2/3] 前端已构建，跳过"
+    echo ">>> 后端启动失败，查看日志："
+    cat /tmp/pds.log
+    exit 1
 fi
 
-# 3. 启动后端（托管前端）
-echo "[3/3] 启动服务..."
-echo "访问: http://localhost:8000"
-echo "按 Ctrl+C 停止"
-cd backend
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+# 启动隧道
+echo ">>> 启动隧道..."
+ssh -R 80:localhost:8000 nokey@localhost.run
