@@ -10,4 +10,5 @@ python-multipart==0.0.19
 PyYAML==6.0.2
 python-jose[cryptography]==3.4.0
 bcrypt==4.2.1
-alibabacloud-dypnsapi20170525==2.0.0
+# 可选：阿里云短信 SDK（Termux 等 ARM 环境可能无法安装，不影响应用启动）
+# alibabacloud-dypnsapi20170525==2.0.0
