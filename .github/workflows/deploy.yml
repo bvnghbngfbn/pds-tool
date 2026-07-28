@@ -1,0 +1,23 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Hugging Face
+        uses: huggingface/huggingface-actions@v1
+        with:
+          token: ${{ secrets.HF_TOKEN }}
+
+      - name: Push to HF Space
+        run: |
+          git remote add hf https://huggingface.co/spaces/${{ secrets.HF_USERNAME }}/pds-tool
+          git push hf main --force

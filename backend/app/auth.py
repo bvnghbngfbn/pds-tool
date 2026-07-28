@@ -1,29 +1,28 @@
 """JWT 认证工具：生成/验证 token、密码哈希、获取当前用户、账户锁定。"""
 from __future__ import annotations
 
+import bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 
 from .config import settings
 from .db import AsyncSessionLocal
 from .models import User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def create_access_token(data: dict) -> str:
