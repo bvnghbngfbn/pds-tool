@@ -9,7 +9,11 @@ import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .security import generate_secret_key
+import secrets
+
+
+def _generate_secret_key(length: int = 64) -> str:
+    return secrets.token_urlsafe(length)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,13 +40,13 @@ class AppConfig(BaseSettings):
     # ============ 安全配置 ============
 
     # 应用密钥（自动生成随机密钥，也可通过环境变量覆盖）
-    secret_key: str = os.getenv("PDS_SECRET_KEY", generate_secret_key())
+    secret_key: str = os.getenv("PDS_SECRET_KEY", _generate_secret_key())
 
     # CORS — 生产环境必须通过环境变量指定具体域名，逗号分隔
     cors_origins: str = os.getenv("PDS_CORS_ORIGINS", "")
 
     # JWT（自动生成，也可通过环境变量覆盖）
-    jwt_secret_key: str = os.getenv("PDS_JWT_SECRET_KEY", generate_secret_key())
+    jwt_secret_key: str = os.getenv("PDS_JWT_SECRET_KEY", _generate_secret_key())
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 小时
 
