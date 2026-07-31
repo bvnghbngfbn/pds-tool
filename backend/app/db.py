@@ -6,11 +6,20 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import select
 
-from .config import DB_PATH
+from .config import DB_PATH, DATABASE_URL
 from . import models
 
 
-engine = create_async_engine(f"sqlite+aiosqlite:///{DB_PATH}", echo=False)
+if DATABASE_URL:
+    # PostgreSQL (Supabase) — 需要 SSL
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={"ssl": "require"},
+    )
+else:
+    # 本地开发回退到 SQLite
+    engine = create_async_engine(f"sqlite+aiosqlite:///{DB_PATH}", echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

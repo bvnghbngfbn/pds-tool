@@ -21,6 +21,9 @@ DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "pds.db"
+
+# 数据库连接串：设置后使用 PostgreSQL（Supabase），未设置则回退到本地 SQLite
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 STATIC_DIR = BASE_DIR / "static"
 
 
