@@ -144,8 +144,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             headers.setdefault("Strict-Transport-Security", settings.hsts_header)
 
         # 移除可能泄露框架信息的头
-        headers.pop("X-Powered-By", None)
-        headers.pop("Server", None)
+        if "X-Powered-By" in headers:
+            del headers["X-Powered-By"]
+        if "Server" in headers:
+            del headers["Server"]
 
         return response
 
