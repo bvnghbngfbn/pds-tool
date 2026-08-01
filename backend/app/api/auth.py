@@ -135,8 +135,8 @@ def _make_auth_response(user: User) -> JSONResponse:
         key="pds_token",
         value=token,
         httponly=True,
-        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
-        samesite="lax",
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
         max_age=settings.jwt_expire_minutes * 60,
         path="/",
     )
@@ -256,7 +256,7 @@ async def register_email(body: EmailRegisterRequest, request: Request):
         return _make_auth_response(user)
 
 
-@router.post("/login-email", response_model=TokenResponse), response_model=TokenResponse)
+@router.post("/login-email", response_model=TokenResponse)
 async def login_email(body: EmailLoginRequest, request: Request):
     """邮箱 + 验证码登录。"""
     if not EMAIL_RE.match(body.email):
@@ -333,7 +333,7 @@ async def register_phone(body: PhoneRegisterRequest, request: Request):
         return _make_auth_response(user)
 
 
-@router.post("/login-phone", response_model=TokenResponse), response_model=TokenResponse)
+@router.post("/login-phone", response_model=TokenResponse)
 async def login_phone(body: PhoneLoginRequest, request: Request):
     """手机号 + 验证码登录。"""
     if not PHONE_RE.match(body.phone):
