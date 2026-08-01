@@ -52,6 +52,9 @@ class AppConfig(BaseSettings):
     jwt_secret_key: str = os.getenv("PDS_JWT_SECRET_KEY", _generate_secret_key())
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 小时
+    # Cookie 安全配置：跨站部署（前端 Pages + 后端独立域名）必须设为 true
+    cookie_secure: bool = os.getenv("COOKIE_SECURE", "true").lower() == "true"
+    cookie_samesite: str = os.getenv("COOKIE_SAMESITE", "none")  # 跨站需设为 none
 
     # 安全响应头
     csp_header: str = (
@@ -59,7 +62,7 @@ class AppConfig(BaseSettings):
         "script-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: https:; "
-        "connect-src 'self'; "
+        "connect-src 'self' https:; "
         "font-src 'self'; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
