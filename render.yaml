@@ -5,6 +5,8 @@ services:
     buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build && cd ..
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: DATABASE_URL
+        sync: false
       - key: PDS_SECRET_KEY
         generateValue: true
       - key: PDS_JWT_SECRET_KEY
@@ -12,9 +14,9 @@ services:
       - key: PDS_CORS_ORIGINS
         sync: false
       - key: PDS_SMTP_HOST
-        sync: false
+        value: smtp.126.com
       - key: PDS_SMTP_PORT
-        sync: false
+        value: 587
       - key: PDS_SMTP_USER
         sync: false
       - key: PDS_SMTP_PASSWORD

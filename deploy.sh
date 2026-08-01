@@ -56,6 +56,7 @@ services:
       - PDS_SMTP_USE_TLS=${PDS_SMTP_USE_TLS:-true}
       - PDS_ALIYUN_ACCESS_KEY_ID=${PDS_ALIYUN_ACCESS_KEY_ID:-}
       - PDS_ALIYUN_ACCESS_KEY_SECRET=${PDS_ALIYUN_ACCESS_KEY_SECRET:-}
+      - DATABASE_URL=${DATABASE_URL:-}
       - DATA_DIR=/data
     volumes:
       - pds_data:/data
