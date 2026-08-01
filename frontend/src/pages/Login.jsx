@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Eye, EyeOff, User, Lock, Mail, Smartphone, Timer } from 'lucide-react'
+import { ShoppingCart, Eye, EyeOff, User, Lock, Mail, Smartphone, Timer, Settings, X, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { api } from '../api.js'
+import { api, setApiBase, getApiBase } from '../api.js'
 
 const TABS = [
   { key: 'account', label: '账号登录', icon: User },
@@ -18,11 +18,56 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // 后端地址设置
+  const [showSettings, setShowSettings] = useState(false)
+  const [apiBaseInput, setApiBaseInput] = useState('')
+  const [apiSaved, setApiSaved] = useState(false)
+
+  useEffect(() => {
+    setApiBaseInput(getApiBase())
+  }, [])
+
+  const handleSaveApiBase = () => {
+    const url = apiBaseInput.trim()
+    if (!url) {
+      setApiBase('')
+      setApiSaved(true)
+      setTimeout(() => setApiSaved(false), 2000)
+      return
+    }
+    // 自动补全 https
+    let finalUrl = url
+    if (!finalUrl.startsWith('http')) {
+      finalUrl = 'https://' + finalUrl
+    }
+    // 自动补全 /api
+    if (!finalUrl.endsWith('/api') && !finalUrl.includes('/api/')) {
+      finalUrl = finalUrl.replace(/\/$/, '') + '/api'
+    }
+    setApiBase(finalUrl)
+    setApiBaseInput(finalUrl)
+    setApiSaved(true)
+    setTimeout(() => setApiSaved(false), 2000)
+  }
+
+  const handleTestConnection = async () => {
+    try {
+      const res = await fetch(`${apiBaseInput.replace(/\/$/, '')}/health`)
+      if (res.ok) {
+        const data = await res.json()
+        alert(`连接成功！服务版本: ${data.version || '未知'}`)
+      } else {
+        alert(`连接失败: HTTP ${res.status}`)
+      }
+    } catch (err) {
+      alert(`连接失败: ${err.message}`)
+    }
+  }
+
   // 账号登录
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPwd, setShowPwd] = useState(false)
-
   // 邮箱
   const [email, setEmail] = useState('')
   const [emailCode, setEmailCode] = useState('')
@@ -30,7 +75,6 @@ export default function Login() {
   const [emailCodeSent, setEmailCodeSent] = useState(false)
   const [emailCooldown, setEmailCooldown] = useState(0)
   const emailTimerRef = useRef(null)
-
   // 手机号
   const [phone, setPhone] = useState('')
   const [smsCode, setSmsCode] = useState('')
@@ -145,14 +189,71 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-6">
+        {/* Logo + 设置按钮 */}
+        <div className="text-center mb-6 relative">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-lg shadow-brand-200 mb-4">
             <ShoppingCart className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">铺货通</h1>
           <p className="text-sm text-gray-500 mt-1">1688 自动铺货工具</p>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="absolute right-0 top-0 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            title="后端地址设置"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
+
+        {/* 后端地址设置面板 */}
+        {showSettings && (
+          <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 p-5 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">后端地址设置</h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">API 地址</label>
+                <input
+                  type="text"
+                  value={apiBaseInput}
+                  onChange={(e) => setApiBaseInput(e.target.value)}
+                  placeholder="https://your-backend.com/api"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  填入你的后端地址，如 https://xxx.up.railway.app/api
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveApiBase}
+                  className="flex-1 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors flex items-center justify-center gap-1"
+                >
+                  {apiSaved ? <><Check className="w-4 h-4" /> 已保存</> : '保存'}
+                </button>
+                <button
+                  onClick={handleTestConnection}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  测试连接
+                </button>
+              </div>
+              <button
+                onClick={() => { setApiBase(''); setApiBaseInput('/api'); }}
+                className="w-full text-xs text-gray-400 hover:text-gray-600"
+              >
+                恢复默认
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tab 切换 */}
         <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 overflow-hidden">
@@ -172,14 +273,12 @@ export default function Login() {
               </button>
             ))}
           </div>
-
           <div className="p-6">
             {error && (
               <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2 mb-4">
                 {error}
               </div>
             )}
-
             {/* ===== 账号登录 ===== */}
             {tab === 'account' && (
               <form onSubmit={handleAccountSubmit} className="space-y-4">
@@ -218,7 +317,6 @@ export default function Login() {
                 </div>
               </form>
             )}
-
             {/* ===== 邮箱登录 ===== */}
             {tab === 'email' && (
               <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -269,7 +367,6 @@ export default function Login() {
                 </div>
               </form>
             )}
-
             {/* ===== 手机号登录 ===== */}
             {tab === 'phone' && (
               <form onSubmit={handlePhoneSubmit} className="space-y-4">
@@ -322,6 +419,7 @@ export default function Login() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   )
