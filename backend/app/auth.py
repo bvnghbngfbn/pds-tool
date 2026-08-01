@@ -39,7 +39,7 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
-async def check_account_locked(user: User) -> None:
+async def check_account_locked(user: User, db: AsyncSessionLocal = None) -> None:
     """检查账户是否被锁定，若锁定时间已过则自动解锁。"""
     if user.locked_until:
         if datetime.now(timezone.utc) < user.locked_until:
@@ -49,28 +49,28 @@ async def check_account_locked(user: User) -> None:
                 detail="用户名或密码错误",
             )
         else:
-            # 锁定时间已过，自动解锁
-            async with AsyncSessionLocal() as db:
-                user.locked_until = None
-                user.login_attempts = 0
-                await db.commit()
+            # 锁定时间已过，自动解锁（使用传入的 session，避免嵌套事务）
+            user.locked_until = None
+            user.login_attempts = 0
+            if db:
+                await db.flush()
 
 
-async def record_failed_attempt(user: User) -> None:
-    """记录登录失败，达到阈值时锁定账户。"""
-    async with AsyncSessionLocal() as db:
-        user.login_attempts += 1
-        if user.login_attempts >= settings.max_login_attempts:
-            user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=settings.login_lockout_minutes)
-        await db.commit()
+async def record_failed_attempt(user: User, db: AsyncSessionLocal = None) -> None:
+    """记录登录失败，达到阈值时锁定账户。使用传入的 session 避免嵌套事务。"""
+    user.login_attempts += 1
+    if user.login_attempts >= settings.max_login_attempts:
+        user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=settings.login_lockout_minutes)
+    if db:
+        await db.flush()
 
 
-async def reset_login_attempts(user: User) -> None:
-    """登录成功后重置失败计数。"""
-    async with AsyncSessionLocal() as db:
-        user.login_attempts = 0
-        user.locked_until = None
-        await db.commit()
+async def reset_login_attempts(user: User, db: AsyncSessionLocal = None) -> None:
+    """登录成功后重置失败计数。使用传入的 session 避免嵌套事务。"""
+    user.login_attempts = 0
+    user.locked_until = None
+    if db:
+        await db.flush()
 
 
 async def get_current_user(
@@ -100,7 +100,7 @@ async def get_current_user(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用")
 
         # 检查账户锁定
-        await check_account_locked(user)
+        await check_account_locked(user, db)
 
         return user
 

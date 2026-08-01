@@ -1,6 +1,7 @@
 """认证 API：登录、注册、获取当前用户、登录记录、验证码。"""
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timezone
 
@@ -134,7 +135,7 @@ def _make_auth_response(user: User) -> JSONResponse:
         key="pds_token",
         value=token,
         httponly=True,
-        secure=False,  # 开发环境，生产环境应设为 True
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         max_age=settings.jwt_expire_minutes * 60,
         path="/",
@@ -143,7 +144,7 @@ def _make_auth_response(user: User) -> JSONResponse:
 
 
 async def _record_login(
-    user_id: int,
+    user_id: int | None,
     username: str,
     request: Request,
     success: bool,
@@ -172,7 +173,7 @@ def _record_fail(request: Request, username: str, message: str):
 
     async def _safe_record():
         try:
-            await _record_login(0, username, request, False, message)
+            await _record_login(None, username, request, False, message)
         except Exception as e:
             logger.warning(f"记录登录失败日志出错: {e}")
 
@@ -255,7 +256,7 @@ async def register_email(body: EmailRegisterRequest, request: Request):
         return _make_auth_response(user)
 
 
-@router.post("/login-email", response_model=TokenResponse)
+@router.post("/login-email", response_model=TokenResponse), response_model=TokenResponse)
 async def login_email(body: EmailLoginRequest, request: Request):
     """邮箱 + 验证码登录。"""
     if not EMAIL_RE.match(body.email):
@@ -276,12 +277,12 @@ async def login_email(body: EmailLoginRequest, request: Request):
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="该邮箱未注册")
 
-        await check_account_locked(user)
+        await check_account_locked(user, db)
 
         user.last_login_at = datetime.now(timezone.utc)
+        await reset_login_attempts(user, db)
         await db.commit()
 
-        await reset_login_attempts(user)
         await _record_login(user.id, user.username, request, True, "邮箱验证码登录")
 
         return _make_auth_response(user)
@@ -332,7 +333,7 @@ async def register_phone(body: PhoneRegisterRequest, request: Request):
         return _make_auth_response(user)
 
 
-@router.post("/login-phone", response_model=TokenResponse)
+@router.post("/login-phone", response_model=TokenResponse), response_model=TokenResponse)
 async def login_phone(body: PhoneLoginRequest, request: Request):
     """手机号 + 验证码登录。"""
     if not PHONE_RE.match(body.phone):
@@ -353,12 +354,12 @@ async def login_phone(body: PhoneLoginRequest, request: Request):
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="该手机号未注册")
 
-        await check_account_locked(user)
+        await check_account_locked(user, db)
 
         user.last_login_at = datetime.now(timezone.utc)
+        await reset_login_attempts(user, db)
         await db.commit()
 
-        await reset_login_attempts(user)
         await _record_login(user.id, user.username, request, True, "手机号验证码登录")
 
         return _make_auth_response(user)
@@ -401,7 +402,7 @@ async def login(body: LoginRequest, request: Request):
 
         if not user or not verify_password(body.password, user.password_hash):
             if user:
-                await record_failed_attempt(user)
+                await record_failed_attempt(user, db)
                 await _record_login(user.id, body.username, request, False, "密码错误")
             else:
                 _record_fail(request, body.username, "用户不存在")
@@ -412,12 +413,12 @@ async def login(body: LoginRequest, request: Request):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
 
         # 检查账户锁定
-        await check_account_locked(user)
+        await check_account_locked(user, db)
 
         user.last_login_at = datetime.now(timezone.utc)
+        await reset_login_attempts(user, db)
         await db.commit()
 
-        await reset_login_attempts(user)
         await _record_login(user.id, user.username, request, True, "登录成功")
 
         return _make_auth_response(user)

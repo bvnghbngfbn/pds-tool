@@ -18,14 +18,27 @@ async function request(path, options = {}) {
   if (opts.body && typeof opts.body !== 'string') {
     opts.body = JSON.stringify(opts.body)
   }
-  const res = await fetch(`${BASE}${path}`, opts)
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`
-    try { const j = await res.json(); msg = j.detail || j.message || msg } catch { /* ignore */ }
-    throw new Error(msg)
+  // 请求超时保护（30秒）
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  opts.signal = controller.signal
+  try {
+    const res = await fetch(`${BASE}${path}`, opts)
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`
+      try { const j = await res.json(); msg = j.detail || j.message || msg } catch { /* ignore */ }
+      throw new Error(msg)
+    }
+    const ct = res.headers.get('content-type') || ''
+    return ct.includes('application/json') ? res.json() : res.text()
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络或稍后重试')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeoutId)
   }
-  const ct = res.headers.get('content-type') || ''
-  return ct.includes('application/json') ? res.json() : res.text()
 }
 
 export const api = {

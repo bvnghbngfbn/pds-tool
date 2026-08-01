@@ -198,7 +198,7 @@ class LoginRecord(Base):
     __tablename__ = "login_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
     username: Mapped[str] = mapped_column(String(64), default="")
     ip_address: Mapped[str] = mapped_column(String(64), default="")
     user_agent: Mapped[str] = mapped_column(String(512), default="")
