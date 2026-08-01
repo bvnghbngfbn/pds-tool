@@ -1,10 +1,18 @@
 services:
   - type: web
-    name: pds-tool
+    name: pds-tool-backend
     env: python
-    buildCommand: cd backend && pip install -r requirements.txt && cd ../frontend && npm install && npm run build
+    plan: starter
+    buildCommand: |
+      cd backend
+      pip install -r requirements.txt
+      cd ../frontend
+      npm install
+      npm run build
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
       - key: DATABASE_URL
         sync: false
       - key: PDS_SECRET_KEY
@@ -12,11 +20,11 @@ services:
       - key: PDS_JWT_SECRET_KEY
         generateValue: true
       - key: PDS_CORS_ORIGINS
-        sync: false
+        value: "https://bvnghbngfbn.github.io,http://localhost:5173,http://localhost:8000"
       - key: PDS_SMTP_HOST
         value: smtp.qq.com
       - key: PDS_SMTP_PORT
-        value: 587
+        value: "587"
       - key: PDS_SMTP_USER
         sync: false
       - key: PDS_SMTP_PASSWORD
@@ -27,3 +35,5 @@ services:
         sync: false
       - key: PDS_ALIYUN_ACCESS_KEY_SECRET
         sync: false
+    autoDeploy: yes
+    pullRequestPreviewsEnabled: no
