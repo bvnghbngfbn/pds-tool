@@ -21,6 +21,10 @@ services:
         generateValue: true
       - key: PDS_CORS_ORIGINS
         value: "https://bvnghbngfbn.github.io,http://localhost:5173,http://localhost:8000"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: "none"
       - key: PDS_SMTP_HOST
         value: smtp.qq.com
       - key: PDS_SMTP_PORT
