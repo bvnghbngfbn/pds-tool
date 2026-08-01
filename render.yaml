@@ -14,7 +14,7 @@ services:
       - key: PDS_CORS_ORIGINS
         sync: false
       - key: PDS_SMTP_HOST
-        value: smtp.126.com
+        value: smtp.qq.com
       - key: PDS_SMTP_PORT
         value: 587
       - key: PDS_SMTP_USER
