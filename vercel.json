@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/[...path]" }
+  ],
+  "functions": {
+    "api/[...path].py": {
+      "maxDuration": 30
+    }
+  },
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "backend/static"
+}
