@@ -1,12 +1,13 @@
 // 电商铺货工具 PWA Service Worker
-const CACHE_NAME = 'pds-v1'
+const CACHE_NAME = 'pds-v20260802-platform-sdk'
+const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '')
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon.svg',
+  `${SCOPE_PATH}/`,
+  `${SCOPE_PATH}/index.html`,
+  `${SCOPE_PATH}/manifest.json`,
+  `${SCOPE_PATH}/icons/icon-192.png`,
+  `${SCOPE_PATH}/icons/icon-512.png`,
+  `${SCOPE_PATH}/icons/icon.svg`,
 ]
 
 self.addEventListener('install', (e) => {
@@ -41,7 +42,7 @@ self.addEventListener('fetch', (e) => {
   if (request.mode === 'navigate') {
     // 导航请求：网络优先
     e.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
+      fetch(request).catch(() => caches.match(`${SCOPE_PATH}/index.html`))
     )
     return
   }

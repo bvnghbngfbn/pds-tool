@@ -105,9 +105,16 @@ export default function SettingsPage() {
             onChange={(v) => update('pdd', 'pdd_access_token', v)} />
           <Field label="Mall ID" value={val('pdd', 'pdd_mall_id')}
             onChange={(v) => update('pdd', 'pdd_mall_id', v)} />
-          <Field label="API 地址" placeholder="https://..." value={val('pdd', 'pdd_api_url')}
+          <Field label="叶子类目 ID" value={val('pdd', 'pdd_category_id')}
+            onChange={(v) => update('pdd', 'pdd_category_id', v)} />
+          <Field label="运费模板 ID" value={val('pdd', 'pdd_logistics_template_id')}
+            onChange={(v) => update('pdd', 'pdd_logistics_template_id', v)} />
+          <Field label="API 地址" placeholder="https://gw-api.pinduoduo.com/api/router" value={val('pdd', 'pdd_api_url')}
             onChange={(v) => update('pdd', 'pdd_api_url', v)} />
         </div>
+        <p className="text-xs text-gray-400 mt-3">
+          拼多多发布商品需先获取店铺可发布叶子类目、平台图片、类目规则和运费模板；当前调用 pdd.goods.add。
+        </p>
       </div>
 
       {/* 抖音商店 */}
@@ -130,9 +137,18 @@ export default function SettingsPage() {
             onChange={(v) => update('douyin', 'douyin_access_token', v)} />
           <Field label="Shop ID" value={val('douyin', 'douyin_shop_id')}
             onChange={(v) => update('douyin', 'douyin_shop_id', v)} />
-          <Field label="API 地址" placeholder="https://..." value={val('douyin', 'douyin_api_url')}
+          <Field label="类目 ID" value={val('douyin', 'douyin_category_id')}
+            onChange={(v) => update('douyin', 'douyin_category_id', v)} />
+          <Field label="运费模板 ID" value={val('douyin', 'douyin_freight_id')}
+            onChange={(v) => update('douyin', 'douyin_freight_id', v)} />
+          <Field label="接口 Method" placeholder="product.addV2" value={val('douyin', 'douyin_method')}
+            onChange={(v) => update('douyin', 'douyin_method', v)} />
+          <Field label="API 地址" placeholder="https://openapi-fxg.jinritemai.com" value={val('douyin', 'douyin_api_url')}
             onChange={(v) => update('douyin', 'douyin_api_url', v)} />
         </div>
+        <p className="text-xs text-gray-400 mt-3">
+          抖店接口使用公共参数签名，默认 method 为 product.addV2；如使用即时零售，可按开放平台文档切换 method。
+        </p>
       </div>
 
       {/* 快手小店 */}
@@ -151,13 +167,26 @@ export default function SettingsPage() {
             onChange={(v) => update('kuaishou', 'kuaishou_app_id', v)} />
           <Field label="App Secret" type="password" value={val('kuaishou', 'kuaishou_app_secret')}
             onChange={(v) => update('kuaishou', 'kuaishou_app_secret', v)} />
+          <Field label="Sign Secret" type="password" value={val('kuaishou', 'kuaishou_sign_secret')}
+            onChange={(v) => update('kuaishou', 'kuaishou_sign_secret', v)} />
           <Field label="Access Token" type="password" value={val('kuaishou', 'kuaishou_access_token')}
             onChange={(v) => update('kuaishou', 'kuaishou_access_token', v)} />
           <Field label="Shop ID" value={val('kuaishou', 'kuaishou_shop_id')}
             onChange={(v) => update('kuaishou', 'kuaishou_shop_id', v)} />
-          <Field label="API 地址" placeholder="https://..." value={val('kuaishou', 'kuaishou_api_url')}
+          <Field label="类目 ID" value={val('kuaishou', 'kuaishou_category_id')}
+            onChange={(v) => update('kuaishou', 'kuaishou_category_id', v)} />
+          <Field label="运费模板 ID" value={val('kuaishou', 'kuaishou_express_template_id')}
+            onChange={(v) => update('kuaishou', 'kuaishou_express_template_id', v)} />
+          <Field label="接口 Method" placeholder="open.item.new" value={val('kuaishou', 'kuaishou_method')}
+            onChange={(v) => update('kuaishou', 'kuaishou_method', v)} />
+          <Field label="签名算法" placeholder="HMAC_SHA256" value={val('kuaishou', 'kuaishou_sign_method')}
+            onChange={(v) => update('kuaishou', 'kuaishou_sign_method', v)} />
+          <Field label="API 地址" placeholder="https://openapi.kwaixiaodian.com" value={val('kuaishou', 'kuaishou_api_url')}
             onChange={(v) => update('kuaishou', 'kuaishou_api_url', v)} />
         </div>
+        <p className="text-xs text-gray-400 mt-3">
+          快手 open.item.new 要求平台图片 URL、类目 ID、SKU、服务规则和运费模板；外网图片需先转为快手素材 URL。
+        </p>
       </div>
 
       {/* Shopify */}

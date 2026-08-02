@@ -69,6 +69,8 @@ async def _build_target_config(target_type: str) -> dict[str, Any]:
             "access_token": await SettingsService.get("pdd_access_token"),
             "mall_id": await SettingsService.get("pdd_mall_id"),
             "api_url": await SettingsService.get("pdd_api_url"),
+            "category_id": await SettingsService.get("pdd_category_id"),
+            "logistics_template_id": await SettingsService.get("pdd_logistics_template_id"),
         }
     if target_type == models.PushTargetType.DOUYIN.value:
         return {
@@ -77,14 +79,22 @@ async def _build_target_config(target_type: str) -> dict[str, Any]:
             "access_token": await SettingsService.get("douyin_access_token"),
             "shop_id": await SettingsService.get("douyin_shop_id"),
             "api_url": await SettingsService.get("douyin_api_url"),
+            "category_id": await SettingsService.get("douyin_category_id"),
+            "freight_id": await SettingsService.get("douyin_freight_id"),
+            "method": await SettingsService.get("douyin_method", "product.addV2"),
         }
     if target_type == models.PushTargetType.KUAISHOU.value:
         return {
             "app_id": await SettingsService.get("kuaishou_app_id"),
             "app_secret": await SettingsService.get("kuaishou_app_secret"),
+            "sign_secret": await SettingsService.get("kuaishou_sign_secret"),
             "access_token": await SettingsService.get("kuaishou_access_token"),
             "shop_id": await SettingsService.get("kuaishou_shop_id"),
             "api_url": await SettingsService.get("kuaishou_api_url"),
+            "category_id": await SettingsService.get("kuaishou_category_id"),
+            "express_template_id": await SettingsService.get("kuaishou_express_template_id"),
+            "method": await SettingsService.get("kuaishou_method", "open.item.new"),
+            "sign_method": await SettingsService.get("kuaishou_sign_method", "HMAC_SHA256"),
         }
     if target_type == models.PushTargetType.GENERIC.value:
         return {

@@ -32,9 +32,16 @@ const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value
 
 const defaultSettings = () => ({
   alibaba: { alibaba_allow_parse_fallback: "true" },
-  pdd: {},
-  douyin: {},
-  kuaishou: {},
+  pdd: { pdd_api_url: "https://gw-api.pinduoduo.com/api/router" },
+  douyin: {
+    douyin_api_url: "https://openapi-fxg.jinritemai.com",
+    douyin_method: "product.addV2",
+  },
+  kuaishou: {
+    kuaishou_api_url: "https://openapi.kwaixiaodian.com",
+    kuaishou_method: "open.item.new",
+    kuaishou_sign_method: "HMAC_SHA256",
+  },
   shopify: {},
   generic: {},
   csv: { csv_export_dir: "exports" },

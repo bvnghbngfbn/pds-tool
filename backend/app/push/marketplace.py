@@ -1,6 +1,11 @@
-"""多平台电商 API 铺货目标基类。"""
+"""多平台电商 API 铺货目标基础工具。"""
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
+import re
+import time
 from typing import Any
 
 import httpx
@@ -10,7 +15,7 @@ from ..security import validate_url
 
 
 class MarketplaceApiTarget(PushTarget):
-    """面向国内电商平台的标准 API 铺货目标。"""
+    """面向国内电商平台的基础 API 铺货目标。"""
 
     platform_name = "电商平台"
     id_field = "app_id"
@@ -89,3 +94,48 @@ class MarketplaceApiTarget(PushTarget):
 
     async def close(self) -> None:
         await self._http.aclose()
+
+
+def compact_json(data: Any) -> str:
+    """稳定 JSON：用于签名和平台 param_json。"""
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def md5_upper(text: str) -> str:
+    return hashlib.md5(text.encode("utf-8")).hexdigest().upper()
+
+
+def hmac_sha256_hex(text: str, secret: str) -> str:
+    return hmac.new(secret.encode("utf-8"), text.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def sign_sorted_params(params: dict[str, Any], secret: str, upper: bool = True) -> str:
+    """按 key ASCII 升序拼接 key+value，首尾拼接 secret 后计算 MD5。"""
+    raw = secret + "".join(f"{k}{params[k]}" for k in sorted(params) if k != "sign") + secret
+    signed = hashlib.md5(raw.encode("utf-8")).hexdigest()
+    return signed.upper() if upper else signed
+
+
+def plain_text(html: str, limit: int = 1000) -> str:
+    text = re.sub(r"<[^>]+>", "", html or "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
+
+
+def first_image(images: list[str]) -> str:
+    return next((u for u in images if u), "")
+
+
+def price_yuan_to_fen(value: Any) -> int:
+    try:
+        return max(1, int(round(float(value or 0) * 100)))
+    except (TypeError, ValueError):
+        return 1
+
+
+def now_seconds() -> int:
+    return int(time.time())
+
+
+def now_millis() -> int:
+    return int(time.time() * 1000)

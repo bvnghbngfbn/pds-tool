@@ -72,29 +72,32 @@ async def test_connection(
         client_id = await SettingsService.get("pdd_client_id")
         client_secret = await SettingsService.get("pdd_client_secret")
         token = await SettingsService.get("pdd_access_token")
-        mall_id = await SettingsService.get("pdd_mall_id")
+        category_id = await SettingsService.get("pdd_category_id")
+        template_id = await SettingsService.get("pdd_logistics_template_id")
         api_url = await SettingsService.get("pdd_api_url")
-        ok = bool(client_id and client_secret and token and mall_id and api_url)
+        ok = bool(client_id and client_secret and token and category_id and template_id and api_url)
         return {"platform": "pdd", "configured": ok,
-                "message": "已配置" if ok else "未配置拼多多 Client、Token、Mall ID 或 API 地址"}
+                "message": "已配置" if ok else "未配置拼多多 Client、Token、叶子类目、运费模板或 API 地址"}
     if platform == "douyin":
         app_key = await SettingsService.get("douyin_app_key")
         app_secret = await SettingsService.get("douyin_app_secret")
         token = await SettingsService.get("douyin_access_token")
-        shop_id = await SettingsService.get("douyin_shop_id")
+        category_id = await SettingsService.get("douyin_category_id")
+        freight_id = await SettingsService.get("douyin_freight_id")
         api_url = await SettingsService.get("douyin_api_url")
-        ok = bool(app_key and app_secret and token and shop_id and api_url)
+        ok = bool(app_key and app_secret and token and category_id and freight_id and api_url)
         return {"platform": "douyin", "configured": ok,
-                "message": "已配置" if ok else "未配置抖音商店 App、Token、Shop ID 或 API 地址"}
+                "message": "已配置" if ok else "未配置抖音商店 App、Token、类目、运费模板或 API 地址"}
     if platform == "kuaishou":
         app_id = await SettingsService.get("kuaishou_app_id")
-        app_secret = await SettingsService.get("kuaishou_app_secret")
+        sign_secret = await SettingsService.get("kuaishou_sign_secret") or await SettingsService.get("kuaishou_app_secret")
         token = await SettingsService.get("kuaishou_access_token")
-        shop_id = await SettingsService.get("kuaishou_shop_id")
+        category_id = await SettingsService.get("kuaishou_category_id")
+        express_template_id = await SettingsService.get("kuaishou_express_template_id")
         api_url = await SettingsService.get("kuaishou_api_url")
-        ok = bool(app_id and app_secret and token and shop_id and api_url)
+        ok = bool(app_id and sign_secret and token and category_id and express_template_id and api_url)
         return {"platform": "kuaishou", "configured": ok,
-                "message": "已配置" if ok else "未配置快手小店 App、Token、Shop ID 或 API 地址"}
+                "message": "已配置" if ok else "未配置快手小店 App、Sign Secret、Token、类目、运费模板或 API 地址"}
     if platform == "generic":
         url = await SettingsService.get("generic_api_url")
         return {"platform": "generic", "configured": bool(url),
