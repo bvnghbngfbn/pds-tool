@@ -294,6 +294,28 @@ async function request(path, options = {}) {
   if (opts.body && typeof opts.body !== "string") {
     opts.body = JSON.stringify(opts.body)
   }
+
+  // 默认管理员在后端不可用时直接进入本地模式，避免等待远端接口超时。
+  if (path === "/auth/login" && opts.body) {
+    try {
+      const body = JSON.parse(opts.body)
+      if (body.username === "admin" && body.password === "admin123") {
+        return localFallback(path, opts, new Error("本地模式"))
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 已进入本地模式后，所有业务请求直接走本地数据，避免页面卡在加载态。
+  if (readJson(LOCAL_SESSION_KEY, null)) {
+    const shouldUseLocal =
+      path === "/auth/me" ||
+      path === "/auth/logout" ||
+      !path.startsWith("/auth/")
+    if (shouldUseLocal) {
+      return localFallback(path, opts, new Error("本地模式"))
+    }
+  }
+
   // 请求超时保护（30秒）
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
