@@ -28,7 +28,7 @@ STATIC_DIR = BASE_DIR / "static"
 
 
 class AppConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="PDS_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="PDS_", env_file=str(BASE_DIR / ".env"), extra="ignore")
 
     # 1688 开放平台（用户在设置页填入，这里仅给默认占位/环境变量入口）
     alibaba_app_key: str = ""
