@@ -487,25 +487,26 @@ async function request(path, options = {}) {
 export const api = {
   // === 认证 ===
   setToken: (token) => { _token = token },
+  securityConfig: () => request("/auth/security-config", { timeoutMs: SESSION_TIMEOUT_MS }),
   // 用户名密码
-  login: (username, password) =>
-    request("/auth/login", { method: "POST", body: { username, password }, timeoutMs: AUTH_TIMEOUT_MS }),
-  register: (username, password) =>
-    request("/auth/register", { method: "POST", body: { username, password }, timeoutMs: AUTH_TIMEOUT_MS }),
+  login: (username, password, turnstileToken = "") =>
+    request("/auth/login", { method: "POST", body: { username, password, turnstile_token: turnstileToken }, timeoutMs: AUTH_TIMEOUT_MS }),
+  register: (username, password, turnstileToken = "") =>
+    request("/auth/register", { method: "POST", body: { username, password, turnstile_token: turnstileToken }, timeoutMs: AUTH_TIMEOUT_MS }),
   // 邮箱验证码
-  sendEmailCode: (email) =>
-    request("/auth/send-email-code", { method: "POST", body: { email }, timeoutMs: VERIFY_CODE_TIMEOUT_MS }),
-  loginEmail: (email, code) =>
-    request("/auth/login-email", { method: "POST", body: { email, code }, timeoutMs: AUTH_TIMEOUT_MS }),
-  registerEmail: (email, code, password) =>
-    request("/auth/register-email", { method: "POST", body: { email, code, password }, timeoutMs: AUTH_TIMEOUT_MS }),
+  sendEmailCode: (email, turnstileToken = "") =>
+    request("/auth/send-email-code", { method: "POST", body: { email, turnstile_token: turnstileToken }, timeoutMs: VERIFY_CODE_TIMEOUT_MS }),
+  loginEmail: (email, code, turnstileToken = "") =>
+    request("/auth/login-email", { method: "POST", body: { email, code, turnstile_token: turnstileToken }, timeoutMs: AUTH_TIMEOUT_MS }),
+  registerEmail: (email, code, password, turnstileToken = "") =>
+    request("/auth/register-email", { method: "POST", body: { email, code, password, turnstile_token: turnstileToken }, timeoutMs: AUTH_TIMEOUT_MS }),
   // 手机号验证码
-  sendSmsCode: (phone) =>
-    request("/auth/send-sms-code", { method: "POST", body: { phone }, timeoutMs: VERIFY_CODE_TIMEOUT_MS }),
-  loginPhone: (phone, code) =>
-    request("/auth/login-phone", { method: "POST", body: { phone, code }, timeoutMs: AUTH_TIMEOUT_MS }),
-  registerPhone: (phone, code, password) =>
-    request("/auth/register-phone", { method: "POST", body: { phone, code, password }, timeoutMs: AUTH_TIMEOUT_MS }),
+  sendSmsCode: (phone, turnstileToken = "") =>
+    request("/auth/send-sms-code", { method: "POST", body: { phone, turnstile_token: turnstileToken }, timeoutMs: VERIFY_CODE_TIMEOUT_MS }),
+  loginPhone: (phone, code, turnstileToken = "") =>
+    request("/auth/login-phone", { method: "POST", body: { phone, code, turnstile_token: turnstileToken }, timeoutMs: AUTH_TIMEOUT_MS }),
+  registerPhone: (phone, code, password, turnstileToken = "") =>
+    request("/auth/register-phone", { method: "POST", body: { phone, code, password, turnstile_token: turnstileToken }, timeoutMs: AUTH_TIMEOUT_MS }),
   me: () => request("/auth/me", { timeoutMs: SESSION_TIMEOUT_MS }),
   logout: () => request("/auth/logout", { method: "POST" }),
   loginRecords: (page = 1, pageSize = 50) =>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Eye, EyeOff, User, Lock, Mail, Smartphone, Timer, Settings, X, Check } from 'lucide-react'
+import { ShoppingCart, Eye, EyeOff, User, Lock, Mail, Smartphone, Timer, Settings, X, Check, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { api, setApiBase, getApiBase } from '../api.js'
 
@@ -17,6 +17,11 @@ export default function Login() {
   const [isRegister, setIsRegister] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [securityConfig, setSecurityConfig] = useState({ turnstile_enabled: false, turnstile_site_key: '' })
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileStatus, setTurnstileStatus] = useState('未启用')
+  const turnstileRef = useRef(null)
+  const turnstileWidgetRef = useRef(null)
 
   // 后端地址设置
   const [showSettings, setShowSettings] = useState(false)
@@ -25,7 +30,81 @@ export default function Login() {
 
   useEffect(() => {
     setApiBaseInput(getApiBase())
+    api.securityConfig()
+      .then((cfg) => {
+        setSecurityConfig(cfg)
+        setTurnstileStatus(cfg.turnstile_enabled ? '等待验证' : '未启用')
+      })
+      .catch(() => setSecurityConfig({ turnstile_enabled: false, turnstile_site_key: '' }))
   }, [])
+
+  useEffect(() => {
+    if (!securityConfig.turnstile_enabled || !securityConfig.turnstile_site_key || !turnstileRef.current) return
+    let cancelled = false
+
+    const renderWidget = () => {
+      if (cancelled || !window.turnstile || !turnstileRef.current) return
+      if (turnstileWidgetRef.current) {
+        try { window.turnstile.remove(turnstileWidgetRef.current) } catch { /* ignore */ }
+      }
+      setTurnstileToken('')
+      setTurnstileStatus('等待验证')
+      turnstileWidgetRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: securityConfig.turnstile_site_key,
+        theme: 'light',
+        size: 'normal',
+        callback: (token) => {
+          setTurnstileToken(token)
+          setTurnstileStatus('验证通过')
+        },
+        'expired-callback': () => {
+          setTurnstileToken('')
+          setTurnstileStatus('验证已过期，请重新验证')
+        },
+        'error-callback': () => {
+          setTurnstileToken('')
+          setTurnstileStatus('验证加载失败，请刷新重试')
+        },
+      })
+    }
+
+    const existing = document.getElementById('cf-turnstile-script')
+    if (existing) {
+      if (window.turnstile) renderWidget()
+      else existing.addEventListener('load', renderWidget, { once: true })
+    } else {
+      const script = document.createElement('script')
+      script.id = 'cf-turnstile-script'
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+      script.async = true
+      script.defer = true
+      script.onload = renderWidget
+      script.onerror = () => setTurnstileStatus('验证脚本加载失败')
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [securityConfig, tab, isRegister])
+
+  const resetHumanCheck = () => {
+    if (!securityConfig.turnstile_enabled) return
+    setTurnstileToken('')
+    setTurnstileStatus('等待验证')
+    if (window.turnstile && turnstileWidgetRef.current) {
+      try { window.turnstile.reset(turnstileWidgetRef.current) } catch { /* ignore */ }
+    }
+  }
+
+  const requireHumanCheck = () => {
+    if (!securityConfig.turnstile_enabled) return ''
+    if (!turnstileToken) {
+      setError('请先完成人机验证')
+      return null
+    }
+    return turnstileToken
+  }
 
   const handleSaveApiBase = () => {
     const url = apiBaseInput.trim()
@@ -102,15 +181,18 @@ export default function Login() {
   const handleSendEmailCode = async () => {
     if (!email.trim()) { setError('请输入邮箱地址'); return }
     setError('')
+    const token = requireHumanCheck()
+    if (token === null) return
     setLoading(true)
     try {
-      await api.sendEmailCode(email.trim())
+      await api.sendEmailCode(email.trim(), token)
       setEmailCodeSent(true)
       startCooldown(setEmailCooldown, emailTimerRef)
     } catch (err) {
       setError(err.message || '发送失败，请检查网络或后端邮箱配置')
     } finally {
       setLoading(false)
+      resetHumanCheck()
     }
   }
 
@@ -118,15 +200,18 @@ export default function Login() {
   const handleSendSmsCode = async () => {
     if (!phone.trim()) { setError('请输入手机号'); return }
     setError('')
+    const token = requireHumanCheck()
+    if (token === null) return
     setLoading(true)
     try {
-      await api.sendSmsCode(phone.trim())
+      await api.sendSmsCode(phone.trim(), token)
       setSmsCodeSent(true)
       startCooldown(setSmsCooldown, smsTimerRef)
     } catch (err) {
       setError(err.message || '发送失败，请检查网络或短信配置')
     } finally {
       setLoading(false)
+      resetHumanCheck()
     }
   }
 
@@ -136,12 +221,14 @@ export default function Login() {
     setError('')
     if (!username.trim() || !password.trim()) { setError('请填写用户名和密码'); return }
     if (password.length < 8) { setError('密码至少 8 位，需包含大小写字母和数字'); return }
+    const token = requireHumanCheck()
+    if (token === null) return
     setLoading(true)
     try {
-      isRegister ? await register(username.trim(), password) : await login(username.trim(), password)
+      isRegister ? await register(username.trim(), password, token) : await login(username.trim(), password, token)
       navigate('/')
     } catch (err) { setError(err.message || '登录失败，请检查网络或后端地址') }
-    finally { setLoading(false) }
+    finally { setLoading(false); resetHumanCheck() }
   }
 
   // 邮箱登录/注册
@@ -150,16 +237,18 @@ export default function Login() {
     setError('')
     if (!email.trim() || !emailCode.trim()) { setError('请填写邮箱和验证码'); return }
     if (isRegister && emailPwd.length < 8) { setError('密码至少 8 位，需包含大小写字母和数字'); return }
+    const token = requireHumanCheck()
+    if (token === null) return
     setLoading(true)
     try {
       if (isRegister) {
-        await registerEmail(email.trim(), emailCode.trim(), emailPwd)
+        await registerEmail(email.trim(), emailCode.trim(), emailPwd, token)
       } else {
-        await loginEmail(email.trim(), emailCode.trim())
+        await loginEmail(email.trim(), emailCode.trim(), token)
       }
       navigate('/')
     } catch (err) { setError(err.message || '操作失败，请检查网络或验证码') }
-    finally { setLoading(false) }
+    finally { setLoading(false); resetHumanCheck() }
   }
 
   // 手机号登录/注册
@@ -168,22 +257,25 @@ export default function Login() {
     setError('')
     if (!phone.trim() || !smsCode.trim()) { setError('请填写手机号和验证码'); return }
     if (isRegister && phonePwd.length < 8) { setError('密码至少 8 位，需包含大小写字母和数字'); return }
+    const token = requireHumanCheck()
+    if (token === null) return
     setLoading(true)
     try {
       if (isRegister) {
-        await registerPhone(phone.trim(), smsCode.trim(), phonePwd)
+        await registerPhone(phone.trim(), smsCode.trim(), phonePwd, token)
       } else {
-        await loginPhone(phone.trim(), smsCode.trim())
+        await loginPhone(phone.trim(), smsCode.trim(), token)
       }
       navigate('/')
     } catch (err) { setError(err.message || '操作失败，请检查网络或验证码') }
-    finally { setLoading(false) }
+    finally { setLoading(false); resetHumanCheck() }
   }
 
   const switchTab = (key) => {
     setTab(key)
     setError('')
     setIsRegister(false)
+    resetHumanCheck()
   }
 
   return (
@@ -277,6 +369,20 @@ export default function Login() {
             {error && (
               <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2 mb-4">
                 {error}
+              </div>
+            )}
+            {securityConfig.turnstile_enabled && (
+              <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-emerald-800">严格人机验证</div>
+                    <div className="text-xs text-emerald-600">{turnstileStatus}</div>
+                  </div>
+                </div>
+                <div ref={turnstileRef} className="min-h-[65px] overflow-hidden rounded-xl" />
               </div>
             )}
             {/* ===== 账号登录 ===== */}

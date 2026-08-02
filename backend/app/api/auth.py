@@ -21,6 +21,7 @@ from ..auth import (
     reset_login_attempts,
 )
 from ..config import settings
+from ..captcha import verify_turnstile_or_raise
 from ..db import AsyncSessionLocal
 from ..models import User, LoginRecord
 from ..security import validate_password_strength, target_rate_limiter
@@ -40,41 +41,49 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=2, max_length=64)
     password: str = Field(..., min_length=8, max_length=128)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=2, max_length=64)
     password: str = Field(..., min_length=8, max_length=128)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class SendEmailCodeRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=128)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class SendSmsCodeRequest(BaseModel):
     phone: str = Field(..., min_length=11, max_length=20)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class EmailRegisterRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=128)
     code: str = Field(..., min_length=6, max_length=6)
     password: str = Field(..., min_length=8, max_length=128)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class PhoneRegisterRequest(BaseModel):
     phone: str = Field(..., min_length=11, max_length=20)
     code: str = Field(..., min_length=6, max_length=6)
     password: str = Field(..., min_length=8, max_length=128)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class EmailLoginRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=128)
     code: str = Field(..., min_length=6, max_length=6)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class PhoneLoginRequest(BaseModel):
     phone: str = Field(..., min_length=11, max_length=20)
     code: str = Field(..., min_length=6, max_length=6)
+    turnstile_token: str = Field("", max_length=2048)
 
 
 class TokenResponse(BaseModel):
@@ -187,9 +196,19 @@ def _record_fail(request: Request, username: str, message: str):
 
 # ---------- 验证码端点 ----------
 
+@router.get("/security-config")
+async def security_config():
+    """返回前端可公开读取的人机验证配置。"""
+    return {
+        "turnstile_enabled": settings.turnstile_enabled,
+        "turnstile_site_key": settings.turnstile_site_key if settings.turnstile_enabled else "",
+    }
+
+
 @router.post("/send-email-code")
-async def send_email_code_endpoint(body: SendEmailCodeRequest):
+async def send_email_code_endpoint(body: SendEmailCodeRequest, request: Request):
     """发送邮箱验证码。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     if not EMAIL_RE.match(body.email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式不正确")
     # 每个邮箱每小时最多 5 次
@@ -203,8 +222,9 @@ async def send_email_code_endpoint(body: SendEmailCodeRequest):
 
 
 @router.post("/send-sms-code")
-async def send_sms_code_endpoint(body: SendSmsCodeRequest):
+async def send_sms_code_endpoint(body: SendSmsCodeRequest, request: Request):
     """发送短信验证码。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     if not PHONE_RE.match(body.phone):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="手机号格式不正确")
     # 每个手机号每小时最多 5 次
@@ -219,6 +239,7 @@ async def send_sms_code_endpoint(body: SendSmsCodeRequest):
 @router.post("/register-email", response_model=TokenResponse)
 async def register_email(body: EmailRegisterRequest, request: Request):
     """邮箱 + 验证码注册。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     if not EMAIL_RE.match(body.email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式不正确")
 
@@ -263,6 +284,7 @@ async def register_email(body: EmailRegisterRequest, request: Request):
 @router.post("/login-email", response_model=TokenResponse)
 async def login_email(body: EmailLoginRequest, request: Request):
     """邮箱 + 验证码登录。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     if not EMAIL_RE.match(body.email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="邮箱格式不正确")
 
@@ -297,6 +319,7 @@ async def login_email(body: EmailLoginRequest, request: Request):
 @router.post("/register-phone", response_model=TokenResponse)
 async def register_phone(body: PhoneRegisterRequest, request: Request):
     """手机号 + 验证码注册。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     if not PHONE_RE.match(body.phone):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="手机号格式不正确")
 
@@ -340,6 +363,7 @@ async def register_phone(body: PhoneRegisterRequest, request: Request):
 @router.post("/login-phone", response_model=TokenResponse)
 async def login_phone(body: PhoneLoginRequest, request: Request):
     """手机号 + 验证码登录。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     if not PHONE_RE.match(body.phone):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="手机号格式不正确")
 
@@ -374,6 +398,7 @@ async def login_phone(body: PhoneLoginRequest, request: Request):
 @router.post("/register", response_model=TokenResponse)
 async def register(body: RegisterRequest, request: Request):
     """注册新用户。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     # 密码强度校验
     ok, msg = validate_password_strength(body.password)
     if not ok:
@@ -400,6 +425,7 @@ async def register(body: RegisterRequest, request: Request):
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, request: Request):
     """用户登录。"""
+    await verify_turnstile_or_raise(body.turnstile_token, request)
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.username == body.username))
         user = result.scalar_one_or_none()

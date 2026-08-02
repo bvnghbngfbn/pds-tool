@@ -66,23 +66,27 @@ export default function App() {
   const isLoginRecords = location.pathname === '/login-records'
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-[640px] mx-auto">
+    <div className="min-h-screen app-shell-bg">
+      <div className="relative z-10 min-h-screen flex flex-col max-w-[760px] mx-auto px-3 sm:px-5">
       {/* 顶栏 */}
-      <header className="sticky top-0 z-20 bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 shrink-0">
+      <header className="sticky top-3 z-20 surface-panel rounded-3xl h-16 flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-slate-900 flex items-center justify-center shadow-lg shadow-brand-500/20">
             <ShoppingCart className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-gray-800">
-            {isLoginRecords ? '登录记录' : currentTab?.label || '电商铺货工具'}
-          </span>
+          <div>
+            <span className="block font-black tracking-tight text-slate-900 leading-none">
+              {isLoginRecords ? '登录记录' : currentTab?.label || '电商铺货工具'}
+            </span>
+            <span className="text-[11px] text-slate-400">Multi-channel Listing Console</span>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {user.role === 'admin' && (
             <NavLink
               to="/login-records"
-              className={`p-2 rounded-lg transition-colors ${
-                isLoginRecords ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:bg-gray-100'
+              className={`p-2 rounded-2xl transition-all ${
+                isLoginRecords ? 'text-brand-600 bg-brand-50 shadow-inner' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'
               }`}
               title="登录记录"
             >
@@ -91,7 +95,7 @@ export default function App() {
           )}
           <button
             onClick={logout}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-2xl text-slate-500 hover:bg-white/80 hover:text-slate-800 transition-all"
             title="退出登录"
           >
             <LogOut className="w-5 h-5" strokeWidth={1.8} />
@@ -100,8 +104,8 @@ export default function App() {
       </header>
 
       {/* 主内容 */}
-      <main className="flex-1 pb-20 overflow-y-auto">
-        <div className="p-4">
+      <main className="flex-1 pb-24 overflow-y-auto">
+        <div className="pt-5 pb-4">
           <Routes>
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/sourcing" element={<ProtectedRoute><Sourcing /></ProtectedRoute>} />
@@ -115,25 +119,26 @@ export default function App() {
       </main>
 
       {/* 底部 Tab 导航 */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 safe-area-bottom">
-        <div className="max-w-[640px] mx-auto h-16 flex items-center justify-around px-1">
+      <nav className="fixed bottom-3 left-0 right-0 z-30 safe-area-bottom px-3">
+        <div className="max-w-[720px] mx-auto h-16 surface-panel rounded-3xl flex items-center justify-around px-2">
           {tabs.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}
               end={t.end}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors ${
-                  isActive ? 'text-brand-600' : 'text-gray-500'
+                `relative flex flex-col items-center justify-center gap-1 flex-1 h-12 rounded-2xl transition-all ${
+                  isActive ? 'text-white bg-slate-950 shadow-xl shadow-slate-900/15' : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
                 }`
               }
             >
-              <t.icon className="w-6 h-6" strokeWidth={1.8} />
+              <t.icon className="w-5 h-5" strokeWidth={1.9} />
               <span className="text-[11px] font-medium">{t.label}</span>
             </NavLink>
           ))}
         </div>
       </nav>
+      </div>
     </div>
   )
 }

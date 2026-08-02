@@ -48,6 +48,11 @@ class AppConfig(BaseSettings):
     # CORS — 生产环境必须通过环境变量指定具体域名，逗号分隔
     cors_origins: str = os.getenv("PDS_CORS_ORIGINS", "")
 
+    # Cloudflare Turnstile 人机验证
+    turnstile_site_key: str = ""
+    turnstile_secret_key: str = ""
+    turnstile_verify_url: str = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
     # JWT（自动生成，也可通过环境变量覆盖）
     jwt_secret_key: str = os.getenv("PDS_JWT_SECRET_KEY", _generate_secret_key())
     jwt_algorithm: str = "HS256"
@@ -59,10 +64,11 @@ class AppConfig(BaseSettings):
     # 安全响应头
     csp_header: str = (
         "default-src 'self'; "
-        "script-src 'self'; "
+        "script-src 'self' https://challenges.cloudflare.com; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https:; "
+        "connect-src 'self' https: https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com; "
         "font-src 'self'; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
@@ -107,6 +113,11 @@ class AppConfig(BaseSettings):
         if not self.cors_origins:
             return ["http://localhost:5173", "http://localhost:8000"]
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def turnstile_enabled(self) -> bool:
+        """是否启用严格人机验证。配置密钥后所有敏感认证接口强制校验。"""
+        return bool(self.turnstile_site_key and self.turnstile_secret_key)
 
 
 settings = AppConfig()

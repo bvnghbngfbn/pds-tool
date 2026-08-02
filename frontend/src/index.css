@@ -2,7 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -14,8 +18,11 @@ html, body, #root {
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
-  background: #f5f7fa;
-  color: #1f2937;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(32, 84, 235, 0.16), transparent 28rem),
+    radial-gradient(circle at 88% 4%, rgba(16, 185, 129, 0.14), transparent 24rem),
+    linear-gradient(135deg, #eef5ff 0%, #f7fbff 45%, #f7f3ea 100%);
+  color: #172033;
 }
 
 /* iOS 安全区适配 */
@@ -26,6 +33,126 @@ body {
 
 /* 禁止长按选中文字（更像 APP）*/
 button, a { -webkit-touch-callout: none; }
+button, a, input, select, textarea { transition-timing-function: var(--ease-out-quart); }
+button:active { transform: translateY(1px) scale(0.985); }
+
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -10px, 0) rotate(1deg); }
+}
+
+@keyframes sheen {
+  0% { transform: translateX(-120%) rotate(8deg); opacity: 0; }
+  20% { opacity: 0.5; }
+  100% { transform: translateX(140%) rotate(8deg); opacity: 0; }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.app-shell-bg {
+  position: relative;
+  overflow-x: hidden;
+}
+
+.app-shell-bg::before,
+.app-shell-bg::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 999px;
+  filter: blur(4px);
+}
+
+.app-shell-bg::before {
+  width: 24rem;
+  height: 24rem;
+  right: -12rem;
+  top: 5rem;
+  background: rgba(245, 158, 11, 0.13);
+  animation: float-slow 9s var(--ease-out-quart) infinite;
+}
+
+.app-shell-bg::after {
+  width: 18rem;
+  height: 18rem;
+  left: -10rem;
+  bottom: 8rem;
+  background: rgba(52, 112, 246, 0.14);
+  animation: float-slow 11s var(--ease-out-quart) infinite reverse;
+}
+
+.surface-panel {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 80px rgba(31, 56, 97, 0.16);
+}
+
+.lux-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82)),
+    radial-gradient(circle at top right, rgba(52, 112, 246, 0.12), transparent 16rem);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 46px rgba(31, 56, 97, 0.11);
+}
+
+.lux-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.58), transparent 65%);
+  transform: translateX(-120%) rotate(8deg);
+  pointer-events: none;
+}
+
+.lux-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 26px 70px rgba(31, 56, 97, 0.16);
+}
+
+.lux-card:hover::after { animation: sheen 900ms var(--ease-out-expo); }
+
+.interactive-row {
+  transition: transform 220ms var(--ease-out-quart), background-color 220ms var(--ease-out-quart), box-shadow 220ms var(--ease-out-quart);
+}
+
+.interactive-row:hover {
+  transform: translateX(4px);
+  background: rgba(238, 245, 255, 0.74);
+}
+
+.animate-rise-in {
+  animation: rise-in 620ms var(--ease-out-expo) both;
+}
+
+.delay-1 { animation-delay: 80ms; }
+.delay-2 { animation-delay: 160ms; }
+.delay-3 { animation-delay: 240ms; }
+.delay-4 { animation-delay: 320ms; }
+
+.live-dot {
+  position: relative;
+}
+
+.live-dot::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.28);
+  animation: pulse-ring 1.8s var(--ease-out-quart) infinite;
+}
 
 /* 点击态（移动端 active 反馈）*/
 .active\:bg-gray-50:active { background-color: #f9fafb; }
@@ -44,4 +171,13 @@ button, a { -webkit-touch-callout: none; }
   .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
   .table-th { @apply px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50; }
   .table-td { @apply px-4 py-3 text-sm text-gray-700; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

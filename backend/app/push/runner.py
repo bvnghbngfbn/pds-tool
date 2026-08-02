@@ -21,6 +21,22 @@ from . import douyin  # noqa: F401
 from . import kuaishou  # noqa: F401
 
 
+SENSITIVE_KEYWORDS = ("token", "secret", "password", "sign", "app_key", "appkey", "client_secret")
+
+
+def _redact_sensitive(value: Any) -> Any:
+    """递归脱敏铺货记录中的平台凭证和签名。"""
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            key = str(k).lower()
+            out[k] = "***" if any(word in key for word in SENSITIVE_KEYWORDS) else _redact_sensitive(v)
+        return out
+    if isinstance(value, list):
+        return [_redact_sensitive(v) for v in value]
+    return value
+
+
 async def _select_products(db: AsyncSession, task: models.PushTask) -> list[models.Product]:
     """按任务筛选条件选出待铺货商品。"""
     stmt = select(models.Product)
@@ -152,7 +168,7 @@ async def run_task(task_id: int) -> dict:
                     target_item_id=result.target_item_id,
                     target_item_url=result.target_item_url,
                     message=result.message,
-                    payload={"mapped": mapped_data, "response": result.payload},
+                    payload={"mapped": mapped_data, "response": _redact_sensitive(result.payload)},
                 )
                 db.add(record)
                 if result.success:

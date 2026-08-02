@@ -23,14 +23,14 @@ export function AuthProvider({ children }) {
     return result
   }
 
-  const login = useCallback(async (username, password) => _persist(await api.login(username, password)), [])
-  const register = useCallback(async (username, password) => _persist(await api.register(username, password)), [])
+  const login = useCallback(async (username, password, turnstileToken) => _persist(await api.login(username, password, turnstileToken)), [])
+  const register = useCallback(async (username, password, turnstileToken) => _persist(await api.register(username, password, turnstileToken)), [])
 
-  const loginEmail = useCallback(async (email, code) => _persist(await api.loginEmail(email, code)), [])
-  const registerEmail = useCallback(async (email, code, password) => _persist(await api.registerEmail(email, code, password)), [])
+  const loginEmail = useCallback(async (email, code, turnstileToken) => _persist(await api.loginEmail(email, code, turnstileToken)), [])
+  const registerEmail = useCallback(async (email, code, password, turnstileToken) => _persist(await api.registerEmail(email, code, password, turnstileToken)), [])
 
-  const loginPhone = useCallback(async (phone, code) => _persist(await api.loginPhone(phone, code)), [])
-  const registerPhone = useCallback(async (phone, code, password) => _persist(await api.registerPhone(phone, code, password)), [])
+  const loginPhone = useCallback(async (phone, code, turnstileToken) => _persist(await api.loginPhone(phone, code, turnstileToken)), [])
+  const registerPhone = useCallback(async (phone, code, password, turnstileToken) => _persist(await api.registerPhone(phone, code, password, turnstileToken)), [])
 
   const logout = useCallback(async () => {
     try { await api.logout() } catch { /* ignore */ }
