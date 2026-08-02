@@ -50,10 +50,10 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* 1688 */}
+      {/* 货源开放平台 */}
       <div className="bg-white rounded-xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="font-semibold text-gray-800 text-sm">1688 开放平台（货源）</div>
+          <div className="font-semibold text-gray-800 text-sm">货源开放平台（供货端口）</div>
           <button
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
             onClick={() => testConn('alibaba')}>
@@ -80,9 +80,84 @@ export default function SettingsPage() {
           </div>
         </div>
         <p className="text-xs text-gray-400 mt-3">
-          申请入口：1688 开放平台 open.1688.com → 创建应用 → 获取 App Key/Secret，并授权获取 Access Token。
+          申请入口：open.1688.com → 创建应用 → 获取 App Key/Secret，并授权获取 Access Token。
           沙箱可用页面解析兜底采集。
         </p>
+      </div>
+
+      {/* 拼多多 */}
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-semibold text-gray-800 text-sm">拼多多（铺货目标）</div>
+          <button
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            onClick={() => testConn('pdd')}>
+            <Plug className="w-3.5 h-3.5" /> 测试
+          </button>
+        </div>
+        <TestBadge result={test.pdd} />
+        <div className="space-y-3 mt-3">
+          <Field label="Client ID" value={val('pdd', 'pdd_client_id')}
+            onChange={(v) => update('pdd', 'pdd_client_id', v)} />
+          <Field label="Client Secret" type="password" value={val('pdd', 'pdd_client_secret')}
+            onChange={(v) => update('pdd', 'pdd_client_secret', v)} />
+          <Field label="Access Token" type="password" value={val('pdd', 'pdd_access_token')}
+            onChange={(v) => update('pdd', 'pdd_access_token', v)} />
+          <Field label="Mall ID" value={val('pdd', 'pdd_mall_id')}
+            onChange={(v) => update('pdd', 'pdd_mall_id', v)} />
+          <Field label="API 地址" placeholder="https://..." value={val('pdd', 'pdd_api_url')}
+            onChange={(v) => update('pdd', 'pdd_api_url', v)} />
+        </div>
+      </div>
+
+      {/* 抖音商店 */}
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-semibold text-gray-800 text-sm">抖音商店（铺货目标）</div>
+          <button
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            onClick={() => testConn('douyin')}>
+            <Plug className="w-3.5 h-3.5" /> 测试
+          </button>
+        </div>
+        <TestBadge result={test.douyin} />
+        <div className="space-y-3 mt-3">
+          <Field label="App Key" value={val('douyin', 'douyin_app_key')}
+            onChange={(v) => update('douyin', 'douyin_app_key', v)} />
+          <Field label="App Secret" type="password" value={val('douyin', 'douyin_app_secret')}
+            onChange={(v) => update('douyin', 'douyin_app_secret', v)} />
+          <Field label="Access Token" type="password" value={val('douyin', 'douyin_access_token')}
+            onChange={(v) => update('douyin', 'douyin_access_token', v)} />
+          <Field label="Shop ID" value={val('douyin', 'douyin_shop_id')}
+            onChange={(v) => update('douyin', 'douyin_shop_id', v)} />
+          <Field label="API 地址" placeholder="https://..." value={val('douyin', 'douyin_api_url')}
+            onChange={(v) => update('douyin', 'douyin_api_url', v)} />
+        </div>
+      </div>
+
+      {/* 快手小店 */}
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-semibold text-gray-800 text-sm">快手小店（铺货目标）</div>
+          <button
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            onClick={() => testConn('kuaishou')}>
+            <Plug className="w-3.5 h-3.5" /> 测试
+          </button>
+        </div>
+        <TestBadge result={test.kuaishou} />
+        <div className="space-y-3 mt-3">
+          <Field label="App ID" value={val('kuaishou', 'kuaishou_app_id')}
+            onChange={(v) => update('kuaishou', 'kuaishou_app_id', v)} />
+          <Field label="App Secret" type="password" value={val('kuaishou', 'kuaishou_app_secret')}
+            onChange={(v) => update('kuaishou', 'kuaishou_app_secret', v)} />
+          <Field label="Access Token" type="password" value={val('kuaishou', 'kuaishou_access_token')}
+            onChange={(v) => update('kuaishou', 'kuaishou_access_token', v)} />
+          <Field label="Shop ID" value={val('kuaishou', 'kuaishou_shop_id')}
+            onChange={(v) => update('kuaishou', 'kuaishou_shop_id', v)} />
+          <Field label="API 地址" placeholder="https://..." value={val('kuaishou', 'kuaishou_api_url')}
+            onChange={(v) => update('kuaishou', 'kuaishou_api_url', v)} />
+        </div>
       </div>
 
       {/* Shopify */}

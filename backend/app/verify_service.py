@@ -76,13 +76,13 @@ async def send_email_code(email: str) -> str:
     if settings.smtp_host and settings.smtp_user:
         try:
             msg = MIMEMultipart("alternative")
-            msg["Subject"] = "铺货通 - 邮箱验证码"
+            msg["Subject"] = "电商铺货工具 - 邮箱验证码"
             msg["From"] = settings.smtp_from or settings.smtp_user
             msg["To"] = email
 
             html = f"""\
 <html><body style="font-family:Arial,sans-serif;padding:20px;">
-  <h2 style="color:#3470f6;">铺货通</h2>
+  <h2 style="color:#3470f6;">电商铺货工具</h2>
   <p>您的验证码是：</p>
   <div style="font-size:32px;font-weight:bold;color:#1F2937;letter-spacing:6px;padding:16px;background:#F3F4F6;border-radius:8px;text-align:center;margin:16px 0;">
     {code}

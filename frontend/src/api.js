@@ -32,11 +32,31 @@ const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value
 
 const defaultSettings = () => ({
   alibaba: { alibaba_allow_parse_fallback: "true" },
+  pdd: {},
+  douyin: {},
+  kuaishou: {},
   shopify: {},
   generic: {},
   csv: { csv_export_dir: "exports" },
   general: { default_markup_ratio: "1.3" },
 })
+
+const TARGET_LABEL = {
+  pdd: "拼多多",
+  douyin: "抖音商店",
+  kuaishou: "快手小店",
+  shopify: "Shopify",
+  generic: "通用 API",
+  csv: "CSV 导出",
+}
+
+const localTargetUrl = (targetType, taskId, offerId) => {
+  if (targetType === "csv") return `local://csv-export/${taskId}/${offerId}`
+  if (targetType === "pdd") return `local://pinduoduo/${taskId}/${offerId}`
+  if (targetType === "douyin") return `local://douyin-shop/${taskId}/${offerId}`
+  if (targetType === "kuaishou") return `local://kuaishou-shop/${taskId}/${offerId}`
+  return `local://push/${targetType}/${taskId}/${offerId}`
+}
 
 const demoTrend = () => {
   const rows = []
@@ -290,10 +310,8 @@ async function localFallback(path, opts, originalError) {
       task_id: id,
       product_id: p.id,
       status: "success",
-      message: `${task.target_type === "csv" ? "CSV 导出" : "铺货"}成功：${p.title}`,
-      target_item_url: task.target_type === "csv"
-        ? `local://csv-export/${id}/${p.offer_id}`
-        : p.source_url,
+      message: `${TARGET_LABEL[task.target_type] || "铺货"}成功：${p.title}`,
+      target_item_url: localTargetUrl(task.target_type, id, p.offer_id),
       created_at: runAt,
     }))
     const logs = [
@@ -364,7 +382,15 @@ async function localFallback(path, opts, originalError) {
   }
 
   if (path.startsWith("/settings/test/")) {
-    return { configured: false, message: "后端暂不可用，已进入本地模式" }
+    const platform = path.split("/").pop()
+    const settings = readJson(LOCAL_SETTINGS_KEY, defaultSettings())
+    const items = settings[platform] || {}
+    const configured = Object.values(items).some(Boolean)
+    return {
+      platform,
+      configured,
+      message: configured ? "本地模式已保存配置，真实连通性需后端验证" : "后端暂不可用，已进入本地模式",
+    }
   }
 
   throw originalError

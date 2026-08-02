@@ -61,7 +61,7 @@ export default function Sourcing() {
 
   return (
     <div className="space-y-4 p-4">
-      <p className="text-sm text-gray-500">搜索 1688 商品或直接导入 offer 链接 / ID</p>
+      <p className="text-sm text-gray-500">搜索货源商品或直接导入 offer 链接 / ID</p>
 
       {warning && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
@@ -77,7 +77,7 @@ export default function Sourcing() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
-              placeholder="输入关键词搜索 1688 商品…"
+              placeholder="输入关键词搜索货源商品…"
               value={keyword} onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
@@ -98,7 +98,7 @@ export default function Sourcing() {
             </button>
           </div>
           <p className="text-xs text-gray-400">
-            搜索需在「平台设置」配置 1688 开放平台 App Key / Secret。未配置时可用下方 offer 导入。
+            搜索需在「平台设置」配置货源开放平台 App Key / Secret。未配置时可用下方 offer 导入。
           </p>
         </form>
       </div>
@@ -108,7 +108,7 @@ export default function Sourcing() {
         <div className="font-semibold text-gray-800 mb-2 text-sm">按 offer 导入</div>
         <textarea
           className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent h-20 resize-none"
-          placeholder="粘贴 1688 商品链接或 offerId，多个用换行/逗号分隔&#10;例: https://detail.1688.com/offer/123456789.html"
+          placeholder="粘贴货源商品链接或 offerId，多个用换行/逗号分隔&#10;例: https://detail.1688.com/offer/123456789.html"
           value={offerInput} onChange={(e) => setOfferInput(e.target.value)}
         />
         <div className="flex items-center justify-between mt-3">

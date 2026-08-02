@@ -137,7 +137,7 @@ export default function Products() {
         <div className="py-16 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
       ) : items.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm py-16 text-center text-gray-400 text-sm">
-          暂无商品，去「1688 选品」导入吧
+          暂无商品，去「选品」导入货源商品吧
         </div>
       ) : (
         <div className="space-y-3">

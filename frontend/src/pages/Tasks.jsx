@@ -5,7 +5,14 @@ import {
 } from 'lucide-react'
 import { api } from '../api'
 
-const TARGET_LABEL = { shopify: 'Shopify', generic: '通用 API', csv: 'CSV 导出' }
+const TARGET_LABEL = {
+  pdd: '拼多多',
+  douyin: '抖音商店',
+  kuaishou: '快手小店',
+  shopify: 'Shopify',
+  generic: '通用 API',
+  csv: 'CSV 导出',
+}
 const TASK_STATUS_LABEL = {
   idle: '空闲', running: '运行中', paused: '已暂停', done: '已完成', error: '出错',
 }
@@ -186,6 +193,9 @@ function CreateTaskModal({ onClose, onCreated }) {
               <select
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
                 value={form.target_type} onChange={(e) => setForm({ ...form, target_type: e.target.value })}>
+                <option value="pdd">拼多多</option>
+                <option value="douyin">抖音商店</option>
+                <option value="kuaishou">快手小店</option>
                 <option value="csv">CSV 导出（免配置）</option>
                 <option value="shopify">Shopify</option>
                 <option value="generic">通用 API</option>

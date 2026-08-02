@@ -1,7 +1,7 @@
 """SQLAlchemy 数据模型。
 
 核心实体：
-- Product: 从 1688 选品入库的商品（源数据 + 转换后数据）
+- Product: 从货源端口选品入库的商品（源数据 + 转换后数据）
 - PushTask: 铺货任务（一次/定时，关联目标平台与商品筛选条件）
 - PushRecord: 单条商品铺货执行记录
 - Setting: 平台凭证与全局参数（KV）
@@ -46,6 +46,9 @@ class PushTaskStatus(str, enum.Enum):
     ERROR = "error"
 
 class PushTargetType(str, enum.Enum):
+    PDD = "pdd"
+    DOUYIN = "douyin"
+    KUAISHOU = "kuaishou"
     SHOPIFY = "shopify"
     GENERIC = "generic"
     CSV = "csv"

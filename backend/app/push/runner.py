@@ -16,6 +16,9 @@ from .base import get_target, PushResult
 from . import shopify  # noqa: F401
 from . import generic  # noqa: F401
 from . import csv_export  # noqa: F401
+from . import pdd  # noqa: F401
+from . import douyin  # noqa: F401
+from . import kuaishou  # noqa: F401
 
 
 async def _select_products(db: AsyncSession, task: models.PushTask) -> list[models.Product]:
@@ -58,6 +61,30 @@ async def _build_target_config(target_type: str) -> dict[str, Any]:
             "shop_url": await SettingsService.get("shopify_shop_url"),
             "access_token": await SettingsService.get("shopify_access_token"),
             "location_id": await SettingsService.get("shopify_location_id"),
+        }
+    if target_type == models.PushTargetType.PDD.value:
+        return {
+            "client_id": await SettingsService.get("pdd_client_id"),
+            "client_secret": await SettingsService.get("pdd_client_secret"),
+            "access_token": await SettingsService.get("pdd_access_token"),
+            "mall_id": await SettingsService.get("pdd_mall_id"),
+            "api_url": await SettingsService.get("pdd_api_url"),
+        }
+    if target_type == models.PushTargetType.DOUYIN.value:
+        return {
+            "app_key": await SettingsService.get("douyin_app_key"),
+            "app_secret": await SettingsService.get("douyin_app_secret"),
+            "access_token": await SettingsService.get("douyin_access_token"),
+            "shop_id": await SettingsService.get("douyin_shop_id"),
+            "api_url": await SettingsService.get("douyin_api_url"),
+        }
+    if target_type == models.PushTargetType.KUAISHOU.value:
+        return {
+            "app_id": await SettingsService.get("kuaishou_app_id"),
+            "app_secret": await SettingsService.get("kuaishou_app_secret"),
+            "access_token": await SettingsService.get("kuaishou_access_token"),
+            "shop_id": await SettingsService.get("kuaishou_shop_id"),
+            "api_url": await SettingsService.get("kuaishou_api_url"),
         }
     if target_type == models.PushTargetType.GENERIC.value:
         return {

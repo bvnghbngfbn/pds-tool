@@ -51,8 +51,8 @@ export default function Dashboard() {
     <div className="space-y-5">
       {/* 欢迎区 */}
       <div className="bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl p-5 text-white">
-        <div className="text-sm opacity-80">铺货通 · 1688 自动铺货</div>
-        <div className="text-xl font-bold mt-1">一键铺货，轻松运营</div>
+        <div className="text-sm opacity-80">电商铺货工具</div>
+        <div className="text-xl font-bold mt-1">多平台一键铺货，轻松运营</div>
         <div className="mt-4 flex gap-2">
           <button
             onClick={() => navigate('/sourcing')}
@@ -112,7 +112,7 @@ export default function Dashboard() {
         {statusData.length === 0 || statusData.every(s => s.value === 0) ? (
           <div className="h-36 flex flex-col items-center justify-center text-gray-400 text-sm">
             <Package className="w-10 h-10 mb-2 opacity-30" />
-            暂无商品，去 1688 选品导入吧
+            暂无商品，去货源导入页添加商品吧
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={200}>
@@ -173,7 +173,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="font-medium text-gray-800 text-sm">平台设置</div>
-              <div className="text-xs text-gray-400">配置 1688 与目标平台</div>
+              <div className="text-xs text-gray-400">配置货源接口与目标平台</div>
             </div>
           </div>
           <ArrowRight className="w-4 h-4 text-gray-300" />

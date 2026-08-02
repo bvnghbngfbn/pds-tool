@@ -68,6 +68,33 @@ async def test_connection(
         token = await SettingsService.get("shopify_access_token")
         return {"platform": "shopify", "configured": bool(shop and token),
                 "message": "已配置" if shop and token else "未配置店铺地址或 Token"}
+    if platform == "pdd":
+        client_id = await SettingsService.get("pdd_client_id")
+        client_secret = await SettingsService.get("pdd_client_secret")
+        token = await SettingsService.get("pdd_access_token")
+        mall_id = await SettingsService.get("pdd_mall_id")
+        api_url = await SettingsService.get("pdd_api_url")
+        ok = bool(client_id and client_secret and token and mall_id and api_url)
+        return {"platform": "pdd", "configured": ok,
+                "message": "已配置" if ok else "未配置拼多多 Client、Token、Mall ID 或 API 地址"}
+    if platform == "douyin":
+        app_key = await SettingsService.get("douyin_app_key")
+        app_secret = await SettingsService.get("douyin_app_secret")
+        token = await SettingsService.get("douyin_access_token")
+        shop_id = await SettingsService.get("douyin_shop_id")
+        api_url = await SettingsService.get("douyin_api_url")
+        ok = bool(app_key and app_secret and token and shop_id and api_url)
+        return {"platform": "douyin", "configured": ok,
+                "message": "已配置" if ok else "未配置抖音商店 App、Token、Shop ID 或 API 地址"}
+    if platform == "kuaishou":
+        app_id = await SettingsService.get("kuaishou_app_id")
+        app_secret = await SettingsService.get("kuaishou_app_secret")
+        token = await SettingsService.get("kuaishou_access_token")
+        shop_id = await SettingsService.get("kuaishou_shop_id")
+        api_url = await SettingsService.get("kuaishou_api_url")
+        ok = bool(app_id and app_secret and token and shop_id and api_url)
+        return {"platform": "kuaishou", "configured": ok,
+                "message": "已配置" if ok else "未配置快手小店 App、Token、Shop ID 或 API 地址"}
     if platform == "generic":
         url = await SettingsService.get("generic_api_url")
         return {"platform": "generic", "configured": bool(url),

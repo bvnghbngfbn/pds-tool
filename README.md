@@ -1,4 +1,4 @@
-# 铺货通 — 1688 自动铺货工具
+# 电商铺货工具
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" />
@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" />
 </p>
 
-从 1688 选品 → 字段/加价转换 → 自动铺货到零售平台的一站式工具。一件代发模式，开箱即用。
+从货源选品 → 字段/加价转换 → 自动铺货到零售平台的一站式工具。一件代发模式，开箱即用。
 
 > **在线体验**：https://bvnghbngfbn.github.io/pds-tool/  
 > **默认账号**：admin / admin123
@@ -17,10 +17,13 @@
 
 - **用户认证**：注册/登录、JWT 认证、角色权限（管理员/普通用户）
 - **登录审计**：全量登录记录（IP、浏览器、成功/失败），登录统计面板
-- **1688 选品**：通过 1688 开放平台 API 搜索/导入商品；无 API 凭证时自动降级为页面解析兜底
+- **货源选品**：通过供货平台 API 搜索/导入商品；无 API 凭证时自动降级为页面解析兜底
 - **商品库管理**：商品入库、状态流转、批量编辑、详情查看
 - **智能转换**：标题去噪、加价策略、类目映射、描述/图片自动生成
 - **多平台铺货**：
+  - 拼多多（自动化铺货 API）
+  - 抖音商店（自动化铺货 API）
+  - 快手小店（自动化铺货 API）
   - Shopify（Admin REST API 真实上架）
   - 通用 HTTP API（对接自建店铺/有赞/微店等）
   - CSV 批量导出（兼容淘宝/拼多多等批量导入格式）
@@ -35,7 +38,7 @@ backend/   Python FastAPI + SQLAlchemy + APScheduler + SQLite
   app/auth.py       JWT 认证 + bcrypt 密码哈希
   app/sourcing/     1688 API 客户端(签名算法) + 页面解析兜底
   app/transform/    字段映射/加价/类目/标题去噪
-  app/push/         Shopify / 通用API / CSV 三个铺货目标
+  app/push/         拼多多 / 抖音商店 / 快手小店 / Shopify / 通用API / CSV 铺货目标
   app/scheduler.py  Cron 定时调度
   app/api/          REST 接口（含认证、登录记录）
 
@@ -94,12 +97,13 @@ cd frontend && npm run build   # 产物输出到 backend/static
    - 管理员可查看全部登录记录
 
 2. **配置凭证**（平台设置页）
-   - 1688：填入开放平台 App Key / App Secret / Access Token（open.1688.com 申请）
+   - 货源端口：填入开放平台 App Key / App Secret / Access Token（open.1688.com 申请）
    - 未配置时可用 offer 链接导入，自动走页面解析兜底
+   - 拼多多、抖音商店、快手小店：分别填入 App/Client、Token、店铺 ID 和 API 地址
    - Shopify：填店铺地址 + Admin API Token（CSV 模式无需任何配置即可试用）
 
-3. **选品导入**（1688 选品页）
-   - 关键词搜索 1688 商品，或直接粘贴 offer 链接/ID 批量导入
+3. **选品导入**（选品页）
+   - 关键词搜索货源商品，或直接粘贴 offer 链接/ID 批量导入
 
 4. **转换映射**（商品库页）
    - 设置加价倍率，选中商品批量转换（标题去噪、售价计算、类目映射）
@@ -144,4 +148,4 @@ Python 3.10+ · FastAPI · SQLAlchemy · APScheduler · python-jose · passlib �
 
 ## License
 
-MIT © 铺货通
+MIT © 电商铺货工具

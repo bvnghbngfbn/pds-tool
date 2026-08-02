@@ -194,8 +194,8 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-lg shadow-brand-200 mb-4">
             <ShoppingCart className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">铺货通</h1>
-          <p className="text-sm text-gray-500 mt-1">1688 自动铺货工具</p>
+          <h1 className="text-2xl font-bold text-gray-800">电商铺货工具</h1>
+          <p className="text-sm text-gray-500 mt-1">多平台自动铺货管理</p>
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="absolute right-0 top-0 p-2 text-gray-400 hover:text-gray-600 transition-colors"

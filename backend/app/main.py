@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     await stop_scheduler()
 
 
-app = FastAPI(title="铺货通 - 1688 自动铺货工具", version="1.2.0", lifespan=lifespan)
+app = FastAPI(title="电商铺货工具", version="1.2.0", lifespan=lifespan)
 
 # ============ 安全中间件（顺序重要） ============
 
@@ -75,8 +75,8 @@ async def download_apk():
     return FR(
         str(fp),
         media_type="application/vnd.android.package-archive",
-        filename="铺货通.apk",
-        headers={"Content-Disposition": "attachment; filename*=UTF-8''%E9%93%BA%E8%B4%A7%E9%80%9A.apk"},
+        filename="电商铺货工具.apk",
+        headers={"Content-Disposition": "attachment; filename*=UTF-8''%E7%94%B5%E5%95%86%E9%93%BA%E8%B4%A7%E5%B7%A5%E5%85%B7.apk"},
     )
 
 

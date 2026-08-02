@@ -74,7 +74,7 @@ export default function App() {
             <ShoppingCart className="w-4 h-4 text-white" />
           </div>
           <span className="font-bold text-gray-800">
-            {isLoginRecords ? '登录记录' : currentTab?.label || '铺货通'}
+            {isLoginRecords ? '登录记录' : currentTab?.label || '电商铺货工具'}
           </span>
         </div>
         <div className="flex items-center gap-1">

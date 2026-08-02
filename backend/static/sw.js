@@ -1,4 +1,4 @@
-// 铺货通 PWA Service Worker
+// 电商铺货工具 PWA Service Worker
 const CACHE_NAME = 'pds-v1'
 const ASSETS = [
   '/',

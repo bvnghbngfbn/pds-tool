@@ -1,4 +1,4 @@
-# 铺货通 API 文档
+# 电商铺货工具 API 文档
 
 > 版本：v1.1.0 ｜ 基础地址：`http://localhost:8000` ｜ 全部接口返回 JSON
 
@@ -62,11 +62,11 @@
 
 ---
 
-## 3. 1688 选品
+## 3. 货源选品
 
 ### `POST /api/sourcing/search`
 
-搜索 1688 商品。需在设置页配置 App Key/Secret；未配置时返回提示。
+搜索货源商品。需在设置页配置供货端口 App Key/Secret；未配置时返回提示。
 
 **请求体**
 ```json
@@ -403,7 +403,7 @@
 |---|---|---|---|
 | name | string | - | 任务名称 |
 | task_type | string | once | `once`（一次性）/ `scheduled`（定时） |
-| target_type | string | shopify | `shopify` / `generic` / `csv` |
+| target_type | string | shopify | `pdd` / `douyin` / `kuaishou` / `shopify` / `generic` / `csv` |
 | target_config | object | {} | 目标平台连接配置 |
 | filter_category | string | "" | 筛选类目 |
 | filter_keyword | string | "" | 筛选关键词 |
@@ -415,6 +415,21 @@
 | cron_expr | string | "" | Cron 表达式（定时任务必填） |
 
 **target_config 各平台配置**
+
+拼多多：
+```json
+{ "client_id": "xxx", "client_secret": "xxx", "access_token": "xxx", "mall_id": "xxx", "api_url": "https://..." }
+```
+
+抖音商店：
+```json
+{ "app_key": "xxx", "app_secret": "xxx", "access_token": "xxx", "shop_id": "xxx", "api_url": "https://..." }
+```
+
+快手小店：
+```json
+{ "app_id": "xxx", "app_secret": "xxx", "access_token": "xxx", "shop_id": "xxx", "api_url": "https://..." }
+```
 
 Shopify：
 ```json
@@ -575,7 +590,7 @@ CSV：
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | items | object | 键值对（key→value） |
-| category | string | 类别：alibaba/shopify/generic/general |
+| category | string | 类别：alibaba/pdd/douyin/kuaishou/shopify/generic/csv/general |
 
 **响应**：`{"ok": true}`
 
@@ -589,7 +604,7 @@ CSV：
 
 | 参数 | 可选值 |
 |---|---|
-| platform | `alibaba` / `shopify` / `generic` |
+| platform | `alibaba` / `pdd` / `douyin` / `kuaishou` / `shopify` / `generic` |
 
 **响应示例**
 ```json
@@ -634,7 +649,7 @@ CSV：
 | name | string | 任务名称 |
 | task_type | string | once/scheduled |
 | status | string | idle/running/paused/done/error |
-| target_type | string | shopify/generic/csv |
+| target_type | string | pdd/douyin/kuaishou/shopify/generic/csv |
 | target_config | object | 目标平台配置 |
 | filter_* | string | 商品筛选条件 |
 | limit | int | 单次铺货上限 |

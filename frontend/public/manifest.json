@@ -1,7 +1,7 @@
 {
-  "name": "铺货通 - 1688 自动铺货工具",
-  "short_name": "铺货通",
-  "description": "一键打通 1688 选品与多平台铺货，一件代发模式",
+  "name": "电商铺货工具",
+  "short_name": "电商铺货",
+  "description": "一键打通货源导入与多平台铺货，一件代发模式",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
