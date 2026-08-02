@@ -108,7 +108,7 @@ export default function Login() {
       setEmailCodeSent(true)
       startCooldown(setEmailCooldown, emailTimerRef)
     } catch (err) {
-      setError(err.message || '发送失败')
+      setError(err.message || '发送失败，请检查网络或后端邮箱配置')
     } finally {
       setLoading(false)
     }
@@ -124,7 +124,7 @@ export default function Login() {
       setSmsCodeSent(true)
       startCooldown(setSmsCooldown, smsTimerRef)
     } catch (err) {
-      setError(err.message || '发送失败')
+      setError(err.message || '发送失败，请检查网络或短信配置')
     } finally {
       setLoading(false)
     }
@@ -140,7 +140,7 @@ export default function Login() {
     try {
       isRegister ? await register(username.trim(), password) : await login(username.trim(), password)
       navigate('/')
-    } catch (err) { setError(err.message) }
+    } catch (err) { setError(err.message || '登录失败，请检查网络或后端地址') }
     finally { setLoading(false) }
   }
 
@@ -158,7 +158,7 @@ export default function Login() {
         await loginEmail(email.trim(), emailCode.trim())
       }
       navigate('/')
-    } catch (err) { setError(err.message) }
+    } catch (err) { setError(err.message || '操作失败，请检查网络或验证码') }
     finally { setLoading(false) }
   }
 
@@ -176,7 +176,7 @@ export default function Login() {
         await loginPhone(phone.trim(), smsCode.trim())
       }
       navigate('/')
-    } catch (err) { setError(err.message) }
+    } catch (err) { setError(err.message || '操作失败，请检查网络或验证码') }
     finally { setLoading(false) }
   }
 
@@ -307,7 +307,7 @@ export default function Login() {
                 </div>
                 <button type="submit" disabled={loading}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-medium text-sm hover:from-brand-600 hover:to-brand-700 transition-all disabled:opacity-60 shadow-md shadow-brand-200">
-                  {loading ? '处理中...' : isRegister ? '注册' : '登录'}
+                  {loading ? (isRegister ? '注册中...' : '登录中...') : isRegister ? '注册' : '登录'}
                 </button>
                 <div className="text-center">
                   <button type="button" onClick={() => { setIsRegister(!isRegister); setError('') }}
@@ -338,7 +338,7 @@ export default function Login() {
                     <button type="button" onClick={handleSendEmailCode}
                       disabled={emailCooldown > 0 || loading}
                       className="shrink-0 px-4 py-2.5 rounded-xl bg-brand-50 text-brand-600 text-sm font-medium hover:bg-brand-100 transition-colors disabled:opacity-50 flex items-center gap-1">
-                      {emailCooldown > 0 ? (
+                      {loading ? '发送中...' : emailCooldown > 0 ? (
                         <><Timer className="w-3.5 h-3.5" />{emailCooldown}s</>
                       ) : emailCodeSent ? '重新发送' : '获取验证码'}
                     </button>
@@ -357,7 +357,7 @@ export default function Login() {
                 )}
                 <button type="submit" disabled={loading}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-medium text-sm hover:from-brand-600 hover:to-brand-700 transition-all disabled:opacity-60 shadow-md shadow-brand-200">
-                  {loading ? '处理中...' : isRegister ? '注册' : '登录'}
+                  {loading ? (isRegister ? '注册中...' : '登录中...') : isRegister ? '注册' : '登录'}
                 </button>
                 <div className="text-center">
                   <button type="button" onClick={() => { setIsRegister(!isRegister); setError('') }}
@@ -388,7 +388,7 @@ export default function Login() {
                     <button type="button" onClick={handleSendSmsCode}
                       disabled={smsCooldown > 0 || loading}
                       className="shrink-0 px-4 py-2.5 rounded-xl bg-brand-50 text-brand-600 text-sm font-medium hover:bg-brand-100 transition-colors disabled:opacity-50 flex items-center gap-1">
-                      {smsCooldown > 0 ? (
+                      {loading ? '发送中...' : smsCooldown > 0 ? (
                         <><Timer className="w-3.5 h-3.5" />{smsCooldown}s</>
                       ) : smsCodeSent ? '重新发送' : '获取验证码'}
                     </button>
@@ -407,7 +407,7 @@ export default function Login() {
                 )}
                 <button type="submit" disabled={loading}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-medium text-sm hover:from-brand-600 hover:to-brand-700 transition-all disabled:opacity-60 shadow-md shadow-brand-200">
-                  {loading ? '处理中...' : isRegister ? '注册' : '登录'}
+                  {loading ? (isRegister ? '注册中...' : '登录中...') : isRegister ? '注册' : '登录'}
                 </button>
                 <div className="text-center">
                   <button type="button" onClick={() => { setIsRegister(!isRegister); setError('') }}

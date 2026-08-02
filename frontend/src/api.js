@@ -9,6 +9,11 @@ const getBase = () => {
 let _base = getBase()
 let _token = null
 
+const DEFAULT_TIMEOUT_MS = 12000
+const AUTH_TIMEOUT_MS = 6000
+const SESSION_TIMEOUT_MS = 3000
+const VERIFY_CODE_TIMEOUT_MS = 9000
+
 const LOCAL_SESSION_KEY = "pds_local_session"
 const LOCAL_PRODUCTS_KEY = "pds_local_products"
 const LOCAL_TASKS_KEY = "pds_local_tasks"
@@ -450,9 +455,11 @@ async function request(path, options = {}) {
     }
   }
 
-  // 请求超时保护（30秒）
+  // 请求超时保护：认证类请求要快失败，避免登录页长时间停在“处理中”
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS
+  delete opts.timeoutMs
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
   opts.signal = controller.signal
   try {
     const res = await fetch(`${_base}${path}`, opts)
@@ -465,7 +472,7 @@ async function request(path, options = {}) {
     return ct.includes("application/json") ? res.json() : res.text()
   } catch (err) {
     if (err.name === "AbortError") {
-      return localFallback(path, opts, new Error("请求超时，请检查网络或稍后重试"))
+      return localFallback(path, opts, new Error("连接后端超时，请检查后端地址或稍后重试"))
     }
     // Failed to fetch 时给出更友好的提示
     if (err.message === "Failed to fetch") {
@@ -482,24 +489,24 @@ export const api = {
   setToken: (token) => { _token = token },
   // 用户名密码
   login: (username, password) =>
-    request("/auth/login", { method: "POST", body: { username, password } }),
+    request("/auth/login", { method: "POST", body: { username, password }, timeoutMs: AUTH_TIMEOUT_MS }),
   register: (username, password) =>
-    request("/auth/register", { method: "POST", body: { username, password } }),
+    request("/auth/register", { method: "POST", body: { username, password }, timeoutMs: AUTH_TIMEOUT_MS }),
   // 邮箱验证码
   sendEmailCode: (email) =>
-    request("/auth/send-email-code", { method: "POST", body: { email } }),
+    request("/auth/send-email-code", { method: "POST", body: { email }, timeoutMs: VERIFY_CODE_TIMEOUT_MS }),
   loginEmail: (email, code) =>
-    request("/auth/login-email", { method: "POST", body: { email, code } }),
+    request("/auth/login-email", { method: "POST", body: { email, code }, timeoutMs: AUTH_TIMEOUT_MS }),
   registerEmail: (email, code, password) =>
-    request("/auth/register-email", { method: "POST", body: { email, code, password } }),
+    request("/auth/register-email", { method: "POST", body: { email, code, password }, timeoutMs: AUTH_TIMEOUT_MS }),
   // 手机号验证码
   sendSmsCode: (phone) =>
-    request("/auth/send-sms-code", { method: "POST", body: { phone } }),
+    request("/auth/send-sms-code", { method: "POST", body: { phone }, timeoutMs: VERIFY_CODE_TIMEOUT_MS }),
   loginPhone: (phone, code) =>
-    request("/auth/login-phone", { method: "POST", body: { phone, code } }),
+    request("/auth/login-phone", { method: "POST", body: { phone, code }, timeoutMs: AUTH_TIMEOUT_MS }),
   registerPhone: (phone, code, password) =>
-    request("/auth/register-phone", { method: "POST", body: { phone, code, password } }),
-  me: () => request("/auth/me"),
+    request("/auth/register-phone", { method: "POST", body: { phone, code, password }, timeoutMs: AUTH_TIMEOUT_MS }),
+  me: () => request("/auth/me", { timeoutMs: SESSION_TIMEOUT_MS }),
   logout: () => request("/auth/logout", { method: "POST" }),
   loginRecords: (page = 1, pageSize = 50) =>
     request(`/auth/login-records?page=${page}&page_size=${pageSize}`),

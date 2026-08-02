@@ -5,6 +5,7 @@ import logging
 import random
 import smtplib
 import string
+import asyncio
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -16,6 +17,10 @@ from .db import AsyncSessionLocal
 from .models import VerificationCode
 
 logger = logging.getLogger(__name__)
+
+
+class EmailSendError(RuntimeError):
+    """邮件验证码发送失败。"""
 
 
 def _generate_code() -> str:
@@ -75,12 +80,31 @@ async def send_email_code(email: str) -> str:
     # 如果配置了 SMTP，发送邮件
     if settings.smtp_host and settings.smtp_user:
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = "电商铺货工具 - 邮箱验证码"
-            msg["From"] = settings.smtp_from or settings.smtp_user
-            msg["To"] = email
+            await asyncio.wait_for(
+                asyncio.to_thread(_send_email_smtp, email, code),
+                timeout=6,
+            )
+            logger.info(f"验证码已发送至 {email}")
+        except asyncio.TimeoutError as e:
+            logger.error("邮件发送超时")
+            raise EmailSendError("邮件发送超时，请稍后重试或检查 SMTP 网络") from e
+        except Exception as e:
+            logger.error(f"邮件发送失败: {e}")
+            raise EmailSendError("邮件发送失败，请检查邮箱授权码或 SMTP 网络") from e
+    else:
+        logger.info(f"[邮箱验证码] {email} -> {code} (SMTP 未配置，仅记录)")
 
-            html = f"""\
+    return code
+
+
+def _send_email_smtp(email: str, code: str) -> None:
+    """通过 SMTP 发送邮箱验证码。放在线程中执行，避免阻塞接口。"""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "电商铺货工具 - 邮箱验证码"
+    msg["From"] = settings.smtp_from or settings.smtp_user
+    msg["To"] = email
+
+    html = f"""\
 <html><body style="font-family:Arial,sans-serif;padding:20px;">
   <h2 style="color:#3470f6;">电商铺货工具</h2>
   <p>您的验证码是：</p>
@@ -89,21 +113,13 @@ async def send_email_code(email: str) -> str:
   </div>
   <p style="color:#6B7280;font-size:13px;">验证码 {settings.verify_code_expire_minutes} 分钟内有效，请勿泄露给他人。</p>
 </body></html>"""
-            msg.attach(MIMEText(html, "html", "utf-8"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
 
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-                if settings.smtp_use_tls:
-                    server.starttls()
-                server.login(settings.smtp_user, settings.smtp_password)
-                server.sendmail(msg["From"], [email], msg.as_string())
-
-            logger.info(f"验证码已发送至 {email}")
-        except Exception as e:
-            logger.error(f"邮件发送失败: {e}")
-    else:
-        logger.info(f"[邮箱验证码] {email} -> {code} (SMTP 未配置，仅记录)")
-
-    return code
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=6) as server:
+        if settings.smtp_use_tls:
+            server.starttls()
+        server.login(settings.smtp_user, settings.smtp_password)
+        server.sendmail(msg["From"], [email], msg.as_string())
 
 
 async def send_sms_code(phone: str) -> str:

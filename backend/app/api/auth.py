@@ -25,6 +25,7 @@ from ..db import AsyncSessionLocal
 from ..models import User, LoginRecord
 from ..security import validate_password_strength, target_rate_limiter
 from ..verify_service import (
+    EmailSendError,
     send_email_code,
     send_sms_code,
     verify_email_code,
@@ -194,7 +195,10 @@ async def send_email_code_endpoint(body: SendEmailCodeRequest):
     # 每个邮箱每小时最多 5 次
     if not target_rate_limiter.is_allowed(f"email:{body.email}", 5, 3600):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="该邮箱验证码发送过于频繁，请稍后再试")
-    await send_email_code(body.email)
+    try:
+        await send_email_code(body.email)
+    except EmailSendError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)) from e
     return {"ok": True, "message": "验证码已发送"}
 
 
