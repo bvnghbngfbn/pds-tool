@@ -12,6 +12,8 @@ let _token = null
 const LOCAL_SESSION_KEY = "pds_local_session"
 const LOCAL_PRODUCTS_KEY = "pds_local_products"
 const LOCAL_TASKS_KEY = "pds_local_tasks"
+const LOCAL_TASK_RECORDS_KEY = "pds_local_task_records"
+const LOCAL_TASK_LOGS_KEY = "pds_local_task_logs"
 const LOCAL_SETTINGS_KEY = "pds_local_settings"
 const LOCAL_LOGIN_RECORDS_KEY = "pds_local_login_records"
 
@@ -64,6 +66,39 @@ const getLocalProducts = () => readJson(LOCAL_PRODUCTS_KEY, [])
 const setLocalProducts = (items) => writeJson(LOCAL_PRODUCTS_KEY, items)
 const getLocalTasks = () => readJson(LOCAL_TASKS_KEY, [])
 const setLocalTasks = (items) => writeJson(LOCAL_TASKS_KEY, items)
+const getLocalTaskRecords = () => readJson(LOCAL_TASK_RECORDS_KEY, {})
+const setLocalTaskRecords = (items) => writeJson(LOCAL_TASK_RECORDS_KEY, items)
+const getLocalTaskLogs = () => readJson(LOCAL_TASK_LOGS_KEY, {})
+const setLocalTaskLogs = (items) => writeJson(LOCAL_TASK_LOGS_KEY, items)
+
+const extractOffers = (offers = []) => {
+  const parts = Array.isArray(offers) ? offers : [offers]
+  const out = []
+  parts.forEach((item) => {
+    const text = String(item || "")
+    const ids = text.match(/\d{6,}/g)
+    if (ids?.length) {
+      ids.forEach((id) => out.push(`https://detail.1688.com/offer/${id}.html`))
+    } else {
+      text.split(/[\n,\s]+/).filter(Boolean).forEach((part) => out.push(part))
+    }
+  })
+  return [...new Set(out)]
+}
+
+const filterProductsForTask = (products, task) => {
+  const limit = Number(task.limit || 50)
+  let items = [...products]
+  if (task.filter_status) items = items.filter((p) => p.status === task.filter_status)
+  if (task.filter_keyword) items = items.filter((p) => p.title?.includes(task.filter_keyword))
+  if (task.filter_category) {
+    items = items.filter((p) =>
+      p.category_source?.includes(task.filter_category) ||
+      p.category_target?.includes(task.filter_category)
+    )
+  }
+  return items.slice(0, limit)
+}
 
 const buildProduct = (offer, index = 0) => {
   const raw = typeof offer === "string" ? offer : offer?.offer_id || offer?.url || String(offer || "")
@@ -215,7 +250,7 @@ async function localFallback(path, opts, originalError) {
   }
 
   if (path === "/sourcing/import/batch" && method === "POST") {
-    const offers = body.offers || []
+    const offers = extractOffers(body.offers || [])
     const products = offers.map(buildProduct)
     setLocalProducts([...products, ...getLocalProducts()])
     return products.map((p) => ({ ok: true, product_id: p.id, offer_id: p.offer_id }))
@@ -243,13 +278,79 @@ async function localFallback(path, opts, originalError) {
 
   if (path.match(/^\/tasks\/\d+\/run$/) && method === "POST") {
     const id = Number(path.split("/")[2])
-    const tasks = getLocalTasks().map((t) => t.id === id ? { ...t, status: "done", last_run_at: today(), total: t.total || 0, success: t.success || 0, failed: t.failed || 0 } : t)
-    setLocalTasks(tasks)
-    return { ok: true }
+    const tasks = getLocalTasks()
+    const task = tasks.find((t) => t.id === id)
+    if (!task) throw new Error("任务不存在")
+
+    const products = getLocalProducts()
+    const targets = filterProductsForTask(products, task)
+    const runAt = today()
+    const records = targets.map((p, index) => ({
+      id: Date.now() + index,
+      task_id: id,
+      product_id: p.id,
+      status: "success",
+      message: `${task.target_type === "csv" ? "CSV 导出" : "铺货"}成功：${p.title}`,
+      target_item_url: task.target_type === "csv"
+        ? `local://csv-export/${id}/${p.offer_id}`
+        : p.source_url,
+      created_at: runAt,
+    }))
+    const logs = [
+      {
+        id: Date.now(),
+        task_id: id,
+        level: "INFO",
+        message: `开始执行任务，筛选到 ${targets.length} 个商品`,
+        created_at: runAt,
+      },
+      {
+        id: Date.now() + 1,
+        task_id: id,
+        level: "INFO",
+        message: targets.length
+          ? `执行完成：成功 ${targets.length}，失败 0`
+          : "执行完成：没有匹配到可铺货商品",
+        created_at: runAt,
+      },
+    ]
+
+    const targetIds = new Set(targets.map((p) => p.id))
+    setLocalProducts(products.map((p) =>
+      targetIds.has(p.id)
+        ? { ...p, status: "pushed", pushed_at: runAt, target_type: task.target_type }
+        : p
+    ))
+
+    const allRecords = getLocalTaskRecords()
+    allRecords[id] = [...records, ...(allRecords[id] || [])]
+    setLocalTaskRecords(allRecords)
+
+    const allLogs = getLocalTaskLogs()
+    allLogs[id] = [...logs, ...(allLogs[id] || [])]
+    setLocalTaskLogs(allLogs)
+
+    setLocalTasks(tasks.map((t) => t.id === id ? {
+      ...t,
+      status: "done",
+      last_run_at: runAt,
+      total: targets.length,
+      success: targets.length,
+      failed: 0,
+    } : t))
+    return { ok: true, total: targets.length, success: targets.length, failed: 0 }
   }
 
-  if (path.includes("/records")) return { items: [], total: 0 }
-  if (path.includes("/logs")) return []
+  if (path.match(/^\/tasks\/\d+\/records/)) {
+    const id = Number(path.split("/")[2])
+    const items = getLocalTaskRecords()[id] || []
+    return { items, total: items.length, page: 1, page_size: items.length || 100 }
+  }
+
+  if (path.match(/^\/tasks\/\d+\/logs/)) {
+    const id = Number(path.split("/")[2])
+    return getLocalTaskLogs()[id] || []
+  }
 
   if (path === "/settings" && method === "GET") {
     return readJson(LOCAL_SETTINGS_KEY, defaultSettings())
