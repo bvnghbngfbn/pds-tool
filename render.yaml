@@ -3,12 +3,7 @@ services:
     name: pds-tool-backend
     env: python
     plan: free
-    buildCommand: |
-      cd backend
-      pip install -r requirements.txt
-      cd ../frontend
-      npm install
-      npm run build
+    buildCommand: cd backend && pip install -r requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
